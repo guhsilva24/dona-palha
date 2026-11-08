@@ -1,0 +1,89 @@
+/**
+ * Estilos base, reset e tipografia
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 15px/1.45 var(--font-b);
+  -webkit-font-smoothing: antialiased;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+body.lock {
+  overflow: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--hero-a);
+  z-index: 10;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.wrap {
+  max-width: 520px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+main {
+  padding-top: 50px;
+  padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+}
+
+svg.i {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+/* Tons visuais */
+.tone-lav { --tb: var(--lav-bg); --tf: var(--lav-fg); }
+.tone-peach { --tb: var(--peach-bg); --tf: var(--peach-fg); }
+.tone-sky { --tb: var(--sky-bg); --tf: var(--sky-fg); }
+.tone-mint { --tb: var(--mint-bg); --tf: var(--mint-fg); }
+.tone-rose { --tb: var(--rose-bg); --tf: var(--rose-fg); }
+.tone-sun { --tb: var(--sun-bg); --tf: var(--sun-fg); }
+
+/* Utilitários tipográficos */
+.pos { color: var(--good); }
+.neg { color: var(--bad); }
+.muted { color: var(--muted); }
+.big { display: block; font: 600 21px/1.25 var(--font-d); }

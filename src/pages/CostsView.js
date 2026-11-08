@@ -1,0 +1,74 @@
+/**
+ * Página de Custos e Insumos (CostsView)
+ */
+
+import { formatMoney } from '../calculations/index.js';
+import { shortDate, esc } from '../utils/formatters.js';
+import { I } from '../utils/icons.js';
+
+export function renderCostsView({ state, query = '' }) {
+  let html = '';
+
+  if (state.demo) {
+    html += `
+      <div class="card note" style="margin:0 0 18px">
+        ${I('info')}
+        <div>
+          <b>Dados de exemplo.</b>
+          <button class="link" type="button" data-act="clearDemo">Apagar tudo e começar do zero</button>
+        </div>
+      </div>
+    `;
+  }
+
+  const totalSpent = state.costs.reduce((acc, c) => acc + (Number(c.total) || 0), 0);
+
+  html += `
+    <div class="card sumbar" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+      <div><span>Total gasto</span><b>${formatMoney(totalSpent)}</b></div>
+      <div><span>Compras registradas</span><b>${state.costs.length}</b></div>
+    </div>
+  `;
+
+  const q = query.trim().toLowerCase();
+  const list = state.costs
+    .slice()
+    .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.ts || 0) - (a.ts || 0))
+    .filter(c => !q || c.item.toLowerCase().includes(q));
+
+  if (!list.length) {
+    html += `
+      <div class="card empty" style="margin-top:14px">
+        <b>${state.costs.length ? 'Nenhum item encontrado' : 'Nenhum custo registrado'}</b>
+        ${state.costs.length ? 'Tente outra busca.' : 'Anote o que você compra (chocolate, biscoito, leite condensado, embalagens) e veja o custo unitário de cada item.'}
+        <br>
+        <button class="btn primary" type="button" data-act="newCost">${I('plus')} Novo custo</button>
+      </div>
+    `;
+    return html;
+  }
+
+  html += `
+    <h3 class="day">Itens comprados</h3>
+    <div class="list">
+      ${list.map(c => {
+        const unit = c.qty > 0 ? c.total / c.qty : 0;
+        return `
+          <button class="row tone-sky" type="button" data-act="editCost" data-id="${c.id}">
+            <span class="av">${I('receipt')}</span>
+            <span class="row-m">
+              <span class="row-t">${esc(c.item)}</span>
+              <span class="row-s">${c.qty} un · ${formatMoney(c.total)} · ${shortDate(c.date)}</span>
+            </span>
+            <span class="row-r">
+              <b>${formatMoney(unit)}</b>
+              <span class="row-s">por item</span>
+            </span>
+          </button>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  return html;
+}

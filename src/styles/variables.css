@@ -1,0 +1,139 @@
+/**
+ * Variáveis de design e paleta do Dona Palha
+ * Identidade visual preservada integralmente.
+ */
+
+:root {
+  --bg: #F6F4FD;
+  --surface: #FFFFFF;
+  --ink: #1F1B3D;
+  --muted: #6C6889;
+  --line: #E8E4F6;
+  --field: #F6F4FD;
+
+  --brand: #5B3FD3;
+  --brand-soft: #EEEAFB;
+  --on-brand: #FFFFFF;
+
+  --hero-a: #4A2BC0;
+  --hero-b: #7656EE;
+  --hero-ink: #FFFFFF;
+
+  --good: #127A50;
+  --good-bg: #DFF4EA;
+  --warn: #8F5B00;
+  --warn-bg: #FFEFC7;
+  --bad: #B72A47;
+  --bad-bg: #FCE3E8;
+
+  --lav-bg: #EEEAFB;
+  --lav-fg: #5B3FD3;
+  --peach-bg: #FDEEE3;
+  --peach-fg: #E8761A;
+
+  --sky-bg: #E5EFFD;
+  --sky-fg: #3478E3;
+  --mint-bg: #E2F5EC;
+  --mint-fg: #1C9F6A;
+
+  --rose-bg: #FCE7EE;
+  --rose-fg: #E04370;
+  --sun-bg: #FFF3D6;
+  --sun-fg: #D99A00;
+
+  --on-tone: #FFFFFF;
+  --shadow: 0 6px 18px rgba(80, 60, 160, .10);
+  --scrim: rgba(20, 16, 40, .5);
+
+  --font-d: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-b: 'Nunito Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #13111F;
+    --surface: #1D1A33;
+    --ink: #EFEDFF;
+    --muted: #A8A4C6;
+    --line: #302C4D;
+    --field: #151227;
+
+    --brand: #A08DFF;
+    --brand-soft: #2A2452;
+    --on-brand: #14102B;
+
+    --hero-a: #2C1A86;
+    --hero-b: #4A35B5;
+
+    --good: #58D6A0;
+    --good-bg: #1A3A2D;
+    --warn: #FFC857;
+    --warn-bg: #3D3216;
+    --bad: #FF8CA3;
+    --bad-bg: #3F1D28;
+
+    --lav-bg: #272150;
+    --lav-fg: #A592FF;
+    --peach-bg: #3A2B25;
+    --peach-fg: #FF9B4E;
+
+    --sky-bg: #1F2D49;
+    --sky-fg: #6FA6FF;
+    --mint-bg: #1B3329;
+    --mint-fg: #4ED39B;
+
+    --rose-bg: #3B2232;
+    --rose-fg: #FF7AA0;
+    --sun-bg: #3A3322;
+    --sun-fg: #FFCB3D;
+
+    --on-tone: #14102B;
+    --shadow: 0 6px 18px rgba(0, 0, 0, .35);
+    --scrim: rgba(0, 0, 0, .6);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #13111F;
+  --surface: #1D1A33;
+  --ink: #EFEDFF;
+  --muted: #A8A4C6;
+  --line: #302C4D;
+  --field: #151227;
+
+  --brand: #A08DFF;
+  --brand-soft: #2A2452;
+  --on-brand: #14102B;
+
+  --hero-a: #2C1A86;
+  --hero-b: #4A35B5;
+
+  --good: #58D6A0;
+  --good-bg: #1A3A2D;
+  --warn: #FFC857;
+  --warn-bg: #3D3216;
+  --bad: #FF8CA3;
+  --bad-bg: #3F1D28;
+
+  --lav-bg: #272150;
+  --lav-fg: #A592FF;
+  --peach-bg: #3A2B25;
+  --peach-fg: #FF9B4E;
+
+  --sky-bg: #1F2D49;
+  --sky-fg: #6FA6FF;
+  --mint-bg: #1B3329;
+  --mint-fg: #4ED39B;
+
+  --rose-bg: #3B2232;
+  --rose-fg: #FF7AA0;
+  --sun-bg: #3A3322;
+  --sun-fg: #FFCB3D;
+
+  --on-tone: #14102B;
+  --shadow: 0 6px 18px rgba(0, 0, 0, .35);
+  --scrim: rgba(0, 0, 0, .6);
+  color-scheme: dark;
+}
