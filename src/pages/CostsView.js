@@ -1,5 +1,6 @@
 /**
  * Página de Custos e Insumos (CostsView)
+ * Exibe custos com unidade de medida e preço por grama/unidade.
  */
 
 import { formatMoney } from '../calculations/index.js';
@@ -40,7 +41,7 @@ export function renderCostsView({ state, query = '' }) {
     html += `
       <div class="card empty" style="margin-top:14px">
         <b>${state.costs.length ? 'Nenhum item encontrado' : 'Nenhum custo registrado'}</b>
-        ${state.costs.length ? 'Tente outra busca.' : 'Anote o que você compra (chocolate, biscoito, leite condensado, embalagens) e veja o custo unitário de cada item.'}
+        ${state.costs.length ? 'Tente outra busca.' : 'Anote o que você compra (chocolate, biscoito, leite condensado, embalagens) com a unidade e gramas.'}
         <br>
         <button class="btn primary" type="button" data-act="newCost">${I('plus')} Novo custo</button>
       </div>
@@ -52,17 +53,18 @@ export function renderCostsView({ state, query = '' }) {
     <h3 class="day">Itens comprados</h3>
     <div class="list">
       ${list.map(c => {
-        const unit = c.qty > 0 ? c.total / c.qty : 0;
+        const u = c.unit || (c.item?.toLowerCase().includes('embal') ? 'un' : 'g');
+        const unitCost = c.qty > 0 ? c.total / c.qty : 0;
         return `
           <button class="row tone-sky" type="button" data-act="editCost" data-id="${c.id}">
             <span class="av">${I('receipt')}</span>
             <span class="row-m">
               <span class="row-t">${esc(c.item)}</span>
-              <span class="row-s">${c.qty} un · ${formatMoney(c.total)} · ${shortDate(c.date)}</span>
+              <span class="row-s">${c.qty} ${esc(u)} · ${formatMoney(c.total)} · ${shortDate(c.date)}</span>
             </span>
             <span class="row-r">
-              <b>${formatMoney(unit)}</b>
-              <span class="row-s">por item</span>
+              <b>${formatMoney(unitCost)}</b>
+              <span class="row-s">por ${esc(u)}</span>
             </span>
           </button>
         `;
@@ -72,4 +74,3 @@ export function renderCostsView({ state, query = '' }) {
 
   return html;
 }
-

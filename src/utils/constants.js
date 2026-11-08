@@ -49,3 +49,14 @@ export const STOCK_ADJUSTMENT_REASONS = [
   'Outro'
 ];
 
+export const UNITS_OF_MEASURE = [
+  { id: 'g', label: 'Gramas (g)', short: 'g' },
+  { id: 'kg', label: 'Quilos (kg)', short: 'kg' },
+  { id: 'ml', label: 'Mililitros (ml)', short: 'ml' },
+  { id: 'l', label: 'Litros (L)', short: 'L' },
+  { id: 'un', label: 'Unidades (un)', short: 'un' },
+  { id: 'pct', label: 'Pacote (pct)', short: 'pct' },
+  { id: 'cx', label: 'Caixa (cx)', short: 'cx' }
+];
+
+export const MARGIN_PRESETS = [30, 40, 50, 60, 70, 80];

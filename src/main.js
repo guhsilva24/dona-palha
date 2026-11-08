@@ -29,6 +29,7 @@ import { openFlavorModal } from './modules/flavorModal.js';
 import { openProduceModal } from './modules/produceModal.js';
 import { openCostModal } from './modules/costModal.js';
 import { openStockMovementModal } from './modules/stockMovementModal.js';
+import { openProductionHistoryModal } from './modules/productionHistoryModal.js';
 
 import { getDemoState } from './utils/demoData.js';
 import { VIEWS, DAY_NAMES_LONG, MONTH_NAMES_LONG } from './utils/constants.js';
@@ -299,7 +300,10 @@ class AppController {
       onGoCosts: () => {
         window.location.hash = '#custos';
       },
-      onOpenFlavor: () => this.openFlavorAction()
+      onOpenFlavor: () => this.openFlavorAction(),
+      onViewHistory: () => {
+        openProductionHistoryModal({ state: this.state, flavorId: preFlavorId });
+      }
     });
   }
 
@@ -385,6 +389,9 @@ class AppController {
           break;
         case 'produce':
           this.openProduceAction(id);
+          break;
+        case 'viewProductionHistory':
+          openProductionHistoryModal({ state: this.state, flavorId: id });
           break;
         case 'adjustStock':
           this.openAdjustStockAction(id);

@@ -18,7 +18,9 @@ import {
   calculateOverallSalesStats,
   calculatePeriodSalesStats,
   calculateMonthlyResult,
-  calculateBreakevenPoint
+  calculateBreakevenPoint,
+  calculatePriceFromMargin,
+  calculateMarginFromPrice
 } from '../src/calculations/index.js';
 
 describe('Módulo de Dinheiro e Precisão em Centavos (money.js)', () => {
@@ -234,6 +236,46 @@ describe('Módulo de Ponto de Equilíbrio (breakevenCalculations.js)', () => {
     expect(be.faltaCents).toBe(0);
     expect(be.unitsNeeded).toBe(0);
     expect(be.isCovered).toBe(true);
+  });
+});
+
+describe('Módulo de Precificação por Margem (%) e Gramas de Insumos', () => {
+  it('calcula o preço sugerido com base na margem de lucro desejada (%)', () => {
+    // Custo: R$ 2,50 por palha. Margem desejada: 50%.
+    // Preço = 2,50 / (1 - 0.5) = R$ 5,00. Lucro = R$ 2,50.
+    const pricing50 = calculatePriceFromMargin({ cost: 2.50, marginPercent: 50 });
+    expect(pricing50.suggestedPriceCents).toBe(500);
+    expect(pricing50.suggestedPrice).toBe(5);
+    expect(pricing50.profitCents).toBe(250);
+    expect(pricing50.markupPercent).toBe(100);
+
+    // Custo: R$ 3,00. Margem desejada: 60%.
+    // Preço = 3,00 / (1 - 0.6) = R$ 7,50.
+    const pricing60 = calculatePriceFromMargin({ cost: 3.00, marginPercent: 60 });
+    expect(pricing60.suggestedPriceCents).toBe(750);
+    expect(pricing60.suggestedPrice).toBe(7.5);
+  });
+
+  it('calcula a margem percentual real a partir do preço e custo', () => {
+    // Preço: R$ 6,00. Custo: R$ 3,00 -> Lucro: R$ 3,00 (50% de margem)
+    const margin = calculateMarginFromPrice({ cost: 3.00, price: 6.00 });
+    expect(margin.marginPercent).toBe(50);
+    expect(margin.markupPercent).toBe(100);
+    expect(margin.profitCents).toBe(300);
+  });
+
+  it('calcula proporção em gramas mesmo quando comprado em kg', () => {
+    // Comprou 1 kg de chocolate por R$ 35,00 e usou 200 g na receita
+    const ingCalc = calculateIngredientCost({
+      supplyTotal: 35.00,
+      supplyQty: 1,
+      supplyUnit: 'kg',
+      usedQty: 200,
+      usedUnit: 'g'
+    });
+    // 35 / 1000 = 0.035 * 200 = R$ 7,00 (700 centavos)
+    expect(ingCalc.lineCostCents).toBe(700);
+    expect(ingCalc.lineCost).toBe(7);
   });
 });
 

@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public.costs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   item TEXT NOT NULL,
+  unit TEXT NOT NULL DEFAULT 'g',
   qty NUMERIC NOT NULL CHECK (qty > 0),
   total_cents INTEGER NOT NULL CHECK (total_cents >= 0),
   unit_cost_cents INTEGER NOT NULL DEFAULT 0 CHECK (unit_cost_cents >= 0),

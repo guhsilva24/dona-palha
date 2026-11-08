@@ -1,7 +1,7 @@
 /**
  * Módulo de Produção de Fornada
- * Seleciona ingredientes cadastrados em custos, calcula proporções exatas,
- * rendimento de palhas, custo real unitário, projeções e atualiza o custo médio ponderado.
+ * Seleciona ingredientes cadastrados em custos com suas unidades e gramas,
+ * calcula proporções exatas, rendimento de palhas, custo real unitário e projeções.
  */
 
 import { openSheet, closeSheet } from '../components/BottomSheet.js';
@@ -15,7 +15,7 @@ import {
 } from '../calculations/index.js';
 import { today, num, esc } from '../utils/formatters.js';
 
-export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts, onOpenFlavor }) {
+export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts, onOpenFlavor, onViewHistory }) {
   if (!state.flavors.length) {
     showToast('Cadastre um sabor primeiro');
     if (typeof onOpenFlavor === 'function') onOpenFlavor();
@@ -29,7 +29,7 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
   }
 
   const f0 = state.flavors.find(f => f.id === preFlavorId) || state.flavors[0];
-  const rows = [{ costId: String(state.costs[0].id), qty: '' }];
+  let rows = [{ costId: String(state.costs[0].id), qty: '' }];
 
   function flavorOptions(selectedId) {
     return state.flavors.map(f => `
@@ -41,32 +41,44 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
 
   function ingredientOptions(selectedCostId) {
     return state.costs.map(c => {
-      const unit = c.qty > 0 ? c.total / c.qty : 0;
+      const u = c.unit || (c.item?.toLowerCase().includes('embal') ? 'un' : 'g');
+      const unitCost = c.qty > 0 ? c.total / c.qty : 0;
       return `
         <option value="${esc(c.id)}" ${String(c.id) === String(selectedCostId) ? 'selected' : ''}>
-          ${esc(c.item)} — ${formatMoney(unit)} por unidade
+          ${esc(c.item)} — ${c.qty} ${esc(u)} (${formatMoney(unitCost)}/${esc(u)})
         </option>
       `;
     }).join('');
   }
 
-  function rowHtml(r, index) {
-    return `
-      <div class="card" style="padding:12px;margin:0 0 10px" data-ing-row="${index}">
-        <div class="field">
-          <label>Ingrediente ${index + 1}</label>
-          <select data-ing-cost>${ingredientOptions(r.costId)}</select>
+  function renderRowsHtml() {
+    return rows.map((r, index) => {
+      const selectedCost = state.costs.find(c => String(c.id) === String(r.costId)) || state.costs[0];
+      const u = selectedCost?.unit || (selectedCost?.item?.toLowerCase().includes('embal') ? 'un' : 'g');
+      return `
+        <div class="card" style="padding:12px;margin:0 0 10px" data-ing-row="${index}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label style="margin:0;font-size:13px;font-weight:700">Ingrediente ${index + 1}</label>
+            ${rows.length > 1 ? `
+              <button class="link" type="button" data-del-row="${index}" style="font-size:12px;color:var(--bad)">
+                Remover
+              </button>
+            ` : ''}
+          </div>
+          <div class="field">
+            <select data-ing-cost>${ingredientOptions(r.costId)}</select>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Quantidade utilizada (${esc(u)})</label>
+            <input data-ing-qty inputmode="decimal" placeholder="Ex.: 200 (${esc(u)})" value="${esc(r.qty)}">
+          </div>
+          <div class="subline">
+            <span>Custo proporcional</span>
+            <b data-ing-total>R$ 0,00</b>
+          </div>
         </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Quantidade utilizada</label>
-          <input data-ing-qty inputmode="decimal" placeholder="Ex.: 2 (kg, latas, pacotes...)" value="${esc(r.qty)}">
-        </div>
-        <div class="subline">
-          <span>Custo deste ingrediente</span>
-          <b data-ing-total>R$ 0,00</b>
-        </div>
-      </div>
-    `;
+      `;
+    }).join('');
   }
 
   const body = `
@@ -78,12 +90,15 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
 
       <div class="sec-h" style="margin-top:8px">
         <h2>Ingredientes da fornada</h2>
+        ${(state.productions || []).length > 0 ? `
+          <button class="link" type="button" id="p-btn-history">Ver histórico</button>
+        ` : ''}
       </div>
       <p class="hint" style="margin:0 0 12px">
-        Selecione os insumos cadastrados em Custos e informe quanto de cada um foi usado nesta fornada. O sistema calcula a proporção exata.
+        Selecione o insumo e informe a quantidade de gramas (ou unidades) usada nesta fornada. O sistema calcula a proporção exata do custo.
       </p>
 
-      <div id="p-ingredients">${rows.map(rowHtml).join('')}</div>
+      <div id="p-ingredients">${renderRowsHtml()}</div>
       <button class="btn block" id="p-add-ing" type="button" style="margin-bottom:14px">
         + Adicionar outro ingrediente
       </button>
@@ -94,9 +109,9 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
       </div>
 
       <div class="sum3">
-        <div><span>Custo total da fornada</span><b id="p-lot">—</b></div>
-        <div><span>Custo real por palha</span><b id="p-unit">—</b></div>
-        <div><span>Lucro por palha</span><b id="p-profit">—</b></div>
+        <div><span>Custo da fornada</span><b id="p-lot">—</b></div>
+        <div><span>Custo real / palha</span><b id="p-unit">—</b></div>
+        <div><span>Margem de lucro</span><b id="p-profit">—</b></div>
       </div>
 
       <div class="sum" style="grid-template-columns:1fr 1fr">
@@ -127,28 +142,37 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
         const ingredientsList = [];
 
         rowEls.forEach(el => {
-          const costId = el.querySelector('[data-ing-cost]').value;
-          const q = num(el.querySelector('[data-ing-qty]').value);
+          const costSelect = el.querySelector('[data-ing-cost]');
+          const qtyInput = el.querySelector('[data-ing-qty]');
+          if (!costSelect || !qtyInput) return;
+
+          const costId = costSelect.value;
+          const q = num(qtyInput.value);
           const costItem = state.costs.find(c => String(c.id) === String(costId));
 
           if (!costItem || !(q > 0)) {
             allValid = false;
-            el.querySelector('[data-ing-total]').textContent = 'R$ 0,00';
+            const totalEl = el.querySelector('[data-ing-total]');
+            if (totalEl) totalEl.textContent = 'R$ 0,00';
             return;
           }
 
           const lineCalc = calculateIngredientCost({
             supplyTotal: costItem.total,
             supplyQty: costItem.qty,
-            usedQty: q
+            supplyUnit: costItem.unit || 'g',
+            usedQty: q,
+            usedUnit: costItem.unit || 'g'
           });
 
           totalCostCents += lineCalc.lineCostCents;
-          el.querySelector('[data-ing-total]').textContent = formatMoney(lineCalc.lineCost);
+          const totalEl = el.querySelector('[data-ing-total]');
+          if (totalEl) totalEl.textContent = formatMoney(lineCalc.lineCost);
 
           ingredientsList.push({
             costId: costItem.id,
             item: costItem.item,
+            unit: costItem.unit || 'g',
             qty: q,
             unitCost: lineCalc.unitCost,
             total: lineCalc.lineCost
@@ -168,12 +192,13 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
 
         g('p-lot').textContent = allValid && totalCostCents > 0 ? formatMoney(summary.batchCost) : '—';
         g('p-unit').textContent = isValid ? formatMoney(summary.unitCost) : '—';
-        g('p-profit').textContent = isValid ? formatMoney(summary.unitProfit) : '—';
+        g('p-profit').textContent = isValid ? `${summary.profitMarginPercent}% (${formatMoney(summary.unitProfit)})` : '—';
+        g('p-profit').className = summary.unitProfit >= 0 ? 'pos' : 'neg';
         g('p-revenue').textContent = isValid ? formatMoney(summary.projectedRevenue) : '—';
         g('p-lot-profit').textContent = isValid ? formatMoney(summary.projectedProfit) : '—';
 
         if (flavor) {
-          g('p-hint').textContent = `Preço de venda: ${formatMoney(flavor.price)} por palha. O custo por palha será ponderado com as ${flavor.stock} unidades existentes no estoque.`;
+          g('p-hint').textContent = `Preço de venda: ${formatMoney(flavor.price)} por palha. O custo real será ponderado com as ${flavor.stock} unidades existentes no estoque.`;
         }
 
         return {
@@ -191,12 +216,40 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
           el.oninput = calculateState;
           el.onchange = calculateState;
         });
+
+        b.querySelectorAll('[data-del-row]').forEach(btn => {
+          btn.onclick = () => {
+            const index = parseInt(btn.dataset.delRow, 10);
+            if (rows.length > 1) {
+              rows.splice(index, 1);
+              g('p-ingredients').innerHTML = renderRowsHtml();
+              bindRows();
+            }
+          };
+        });
+
         calculateState();
       }
 
+      const historyBtn = g('p-btn-history');
+      if (historyBtn) {
+        historyBtn.addEventListener('click', () => {
+          closeSheet();
+          if (typeof onViewHistory === 'function') onViewHistory();
+        });
+      }
+
       g('p-add-ing').addEventListener('click', () => {
+        const rowEls = b.querySelectorAll('[data-ing-row]');
+        rowEls.forEach((el, idx) => {
+          if (rows[idx]) {
+            rows[idx].costId = el.querySelector('[data-ing-cost]').value;
+            rows[idx].qty = el.querySelector('[data-ing-qty]').value;
+          }
+        });
+
         rows.push({ costId: String(state.costs[0].id), qty: '' });
-        g('p-ingredients').insertAdjacentHTML('beforeend', rowHtml(rows[rows.length - 1], rows.length - 1));
+        g('p-ingredients').innerHTML = renderRowsHtml();
         bindRows();
       });
 
@@ -235,7 +288,7 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
           });
 
           closeSheet();
-          showToast(`Produção registrada! Custo real: ${formatMoney(res.summary.unitCost)}`);
+          showToast(`Produção registrada! Custo real: ${formatMoney(res.summary.unitCost)} / un`);
           if (typeof onSaved === 'function') onSaved();
         } catch (err) {
           warnEl.hidden = false;

@@ -59,6 +59,7 @@ export const dbService = {
       const mappedCosts = (costs || []).map(c => ({
         id: c.id,
         item: c.item,
+        unit: c.unit || (c.item?.toLowerCase().includes('embal') ? 'un' : 'g'),
         qty: Number(c.qty),
         total: fromCents(c.total_cents),
         date: c.date
@@ -427,7 +428,7 @@ export const dbService = {
    * Cadastra ou edita um custo/insumo
    */
   async saveCost({ costData, user, state }) {
-    const { id, item, qty, total, date } = costData;
+    const { id, item, unit = 'g', qty, total, date } = costData;
     const totalCents = toCents(total);
     const parsedQty = parseFloat(String(qty).replace(',', '.')) || 1;
     const costDate = date || today();
@@ -440,6 +441,7 @@ export const dbService = {
         if (existing) {
           const { error } = await supabase.from('costs').update({
             item,
+            unit,
             qty: parsedQty,
             total_cents: totalCents,
             unit_cost_cents: Math.round(totalCents / parsedQty),
@@ -451,6 +453,7 @@ export const dbService = {
           const { data, error } = await supabase.from('costs').insert({
             user_id: user.id,
             item,
+            unit,
             qty: parsedQty,
             total_cents: totalCents,
             unit_cost_cents: Math.round(totalCents / parsedQty),
@@ -467,6 +470,7 @@ export const dbService = {
 
     if (existing) {
       existing.item = item;
+      existing.unit = unit;
       existing.qty = parsedQty;
       existing.total = fromCents(totalCents);
       existing.date = costDate;
@@ -475,6 +479,7 @@ export const dbService = {
         id: savedId,
         ts: Date.now(),
         item,
+        unit,
         qty: parsedQty,
         total: fromCents(totalCents),
         date: costDate
@@ -733,6 +738,7 @@ export const dbService = {
           id: c.id,
           user_id: user.id,
           item: c.item,
+          unit: c.unit || 'g',
           qty: c.qty,
           total_cents: toCents(c.total),
           unit_cost_cents: Math.round(toCents(c.total) / (c.qty || 1)),

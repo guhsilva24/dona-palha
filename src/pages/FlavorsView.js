@@ -1,5 +1,6 @@
 /**
  * Página de Sabores (FlavorsView)
+ * Exibe sabores, margens de lucro, atalhos de produção e histórico de lotes.
  */
 
 import { formatMoney } from '../calculations/index.js';
@@ -35,6 +36,17 @@ export function renderFlavorsView({ state, query = '' }) {
       </div>
     `;
     return html;
+  }
+
+  // Atalho para ver histórico de todas as fornadas
+  if ((state.productions || []).length > 0) {
+    html += `
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button class="link" type="button" data-act="viewProductionHistory">
+          ${I('box')} Ver histórico de todas as fornadas
+        </button>
+      </div>
+    `;
   }
 
   // Conta total vendido por sabor
@@ -77,6 +89,9 @@ export function renderFlavorsView({ state, query = '' }) {
             <button class="btn sm" type="button" data-act="adjustStock" data-id="${f.id}" title="Ajuste / Perdas">
               Ajustar
             </button>
+            <button class="btn sm" type="button" data-act="viewProductionHistory" data-id="${f.id}" title="Fornadas anteriores">
+              Fornadas
+            </button>
             <button class="btn sm primary" type="button" data-act="produce" data-id="${f.id}">
               ${I('plus')} Produzir
             </button>
@@ -88,4 +103,3 @@ export function renderFlavorsView({ state, query = '' }) {
 
   return html;
 }
-
