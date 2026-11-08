@@ -259,3 +259,82 @@ export function calculateMarginFromPrice({ cost, price }) {
     markupPercent
   };
 }
+
+/**
+ * Calcula o custo por produto e o custo proporcional usado de um insumo.
+ * Atende diretamente ao fluxo:
+ * "Comprei 1 cx de 400g por R$ 20,00, usei 350g em uma fornada de 25... quanto custa por produto?"
+ *
+ * @param {Object} params
+ * @param {number|string} params.supplyTotal Valor total pago na compra (ex: 20.00)
+ * @param {number} params.supplyQty Quantidade total comprada (ex: 400g ou 50 un)
+ * @param {string} [params.supplyUnit='g'] Unidade comprada ('g', 'un', 'kg')
+ * @param {number} [params.packageWeight] Peso por embalagem em gramas (ex: 400)
+ * @param {number} [params.packagesCount=1] Quantidade de embalagens (ex: 1)
+ * @param {number} params.usedQty Quantidade usada na fornada (ex: 350g ou 25 un)
+ * @param {number} [params.recipeYield=25] Rendimento da receita em produtos (ex: 25 palhas)
+ * @returns {Object} { totalPurchased, costPerUnitCents, costPerUnit, usedCostCents, usedCost, costPerProductCents, costPerProduct, remainingQty, remainingCostCents, remainingCost }
+ */
+export function calculateCostPerProduct({
+  supplyTotal,
+  supplyQty,
+  supplyUnit = 'g',
+  packageWeight = null,
+  packagesCount = 1,
+  usedQty,
+  recipeYield = 25
+}) {
+  const supplyTotalCents = toCents(supplyTotal);
+  let totalPurchased = Number(supplyQty) || 0;
+
+  const pkgWeight = Number(packageWeight) || 0;
+  const pkgCount = Number(packagesCount) || 0;
+  if (pkgWeight > 0) {
+    totalPurchased = (pkgCount > 0 ? pkgCount : 1) * pkgWeight;
+  }
+
+  const used = Number(usedQty) || 0;
+  const yieldCount = Math.max(1, Number(recipeYield) || 1);
+
+  if (totalPurchased <= 0 || supplyTotalCents <= 0) {
+    return {
+      totalPurchased,
+      costPerUnitCents: 0,
+      costPerUnit: 0,
+      usedCostCents: 0,
+      usedCost: 0,
+      costPerProductCents: 0,
+      costPerProduct: 0,
+      remainingQty: 0,
+      remainingCostCents: 0,
+      remainingCost: 0
+    };
+  }
+
+  // Custo por unidade básica (ex: por grama ou por unidade simples)
+  const costPerUnitCents = Math.round(supplyTotalCents / totalPurchased);
+
+  // Se informou usedQty, calcula sobre o que usou. Senão, assume o total comprado.
+  const effectiveUsed = used > 0 ? used : totalPurchased;
+  const usedCostCents = Math.round((supplyTotalCents * effectiveUsed) / totalPurchased);
+
+  // Custo por produto = custo usado na receita / unidades que a receita rendeu
+  const costPerProductCents = Math.round(usedCostCents / yieldCount);
+
+  const remainingQty = Math.max(0, totalPurchased - (used > 0 ? used : 0));
+  const remainingCostCents = Math.max(0, supplyTotalCents - usedCostCents);
+
+  return {
+    totalPurchased,
+    costPerUnitCents,
+    costPerUnit: fromCents(costPerUnitCents),
+    usedCostCents,
+    usedCost: fromCents(usedCostCents),
+    yieldCount,
+    costPerProductCents,
+    costPerProduct: fromCents(costPerProductCents),
+    remainingQty,
+    remainingCostCents,
+    remainingCost: fromCents(remainingCostCents)
+  };
+}

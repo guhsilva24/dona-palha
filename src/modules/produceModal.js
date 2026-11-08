@@ -29,7 +29,11 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
   }
 
   const f0 = state.flavors.find(f => f.id === preFlavorId) || state.flavors[0];
-  let rows = [{ costId: String(state.costs[0].id), qty: '' }];
+  const firstCost = state.costs[0];
+  let rows = [{
+    costId: String(firstCost.id),
+    qty: firstCost.usedQty ? String(firstCost.usedQty) : ''
+  }];
 
   function flavorOptions(selectedId) {
     return state.flavors.map(f => `
@@ -49,7 +53,11 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
       } else {
         label += ` (${c.qty} ${esc(u)})`;
       }
-      label += ` — ${formatMoney(unitCost)}/${esc(u)}`;
+      if (c.costPerProduct != null && Number(c.costPerProduct) > 0) {
+        label += ` — ${formatMoney(c.costPerProduct)}/palha`;
+      } else {
+        label += ` — ${formatMoney(unitCost)}/${esc(u)}`;
+      }
       return `
         <option value="${esc(c.id)}" ${String(c.id) === String(selectedCostId) ? 'selected' : ''}>
           ${label}
@@ -283,7 +291,11 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
           }
         });
 
-        rows.push({ costId: String(state.costs[0].id), qty: '' });
+        const nextCost = state.costs[rows.length % state.costs.length] || state.costs[0];
+        rows.push({
+          costId: String(nextCost.id),
+          qty: nextCost.usedQty ? String(nextCost.usedQty) : ''
+        });
         g('p-ingredients').innerHTML = renderRowsHtml();
         bindRows();
       });

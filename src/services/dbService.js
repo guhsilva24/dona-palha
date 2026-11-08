@@ -428,9 +428,25 @@ export const dbService = {
    * Cadastra ou edita um custo/insumo
    */
   async saveCost({ costData, user, state }) {
-    const { id, item, unit = 'g', qty, total, date } = costData;
+    const {
+      id,
+      item,
+      packageType = 'cx',
+      packagesCount = 1,
+      packageWeight = null,
+      unit = 'g',
+      qty,
+      total,
+      usedQty = null,
+      recipeYield = 25,
+      costPerProduct = null,
+      usedCost = null,
+      date
+    } = costData;
     const totalCents = toCents(total);
     const parsedQty = parseFloat(String(qty).replace(',', '.')) || 1;
+    const parsedUsedQty = usedQty != null ? parseFloat(String(usedQty).replace(',', '.')) : null;
+    const parsedYield = recipeYield != null ? parseInt(recipeYield, 10) : 25;
     const costDate = date || today();
 
     let existing = id ? state.costs.find(c => c.id === id) : null;
@@ -438,26 +454,25 @@ export const dbService = {
 
     if (user && isSupabaseReady()) {
       try {
+        const payload = {
+          item,
+          unit,
+          qty: parsedQty,
+          total_cents: totalCents,
+          unit_cost_cents: Math.round(totalCents / parsedQty),
+          date: costDate
+        };
+
         if (existing) {
           const { error } = await supabase.from('costs').update({
-            item,
-            unit,
-            qty: parsedQty,
-            total_cents: totalCents,
-            unit_cost_cents: Math.round(totalCents / parsedQty),
-            date: costDate,
+            ...payload,
             updated_at: new Date().toISOString()
           }).eq('id', id);
           if (error) throw error;
         } else {
           const { data, error } = await supabase.from('costs').insert({
             user_id: user.id,
-            item,
-            unit,
-            qty: parsedQty,
-            total_cents: totalCents,
-            unit_cost_cents: Math.round(totalCents / parsedQty),
-            date: costDate
+            ...payload
           }).select().single();
           if (error) throw error;
           savedId = data.id;
@@ -470,18 +485,32 @@ export const dbService = {
 
     if (existing) {
       existing.item = item;
+      existing.packageType = packageType;
+      existing.packagesCount = packagesCount;
+      existing.packageWeight = packageWeight;
       existing.unit = unit;
       existing.qty = parsedQty;
       existing.total = fromCents(totalCents);
+      existing.usedQty = parsedUsedQty;
+      existing.recipeYield = parsedYield;
+      existing.costPerProduct = costPerProduct;
+      existing.usedCost = usedCost;
       existing.date = costDate;
     } else {
       state.costs.push({
         id: savedId,
         ts: Date.now(),
         item,
+        packageType,
+        packagesCount,
+        packageWeight,
         unit,
         qty: parsedQty,
         total: fromCents(totalCents),
+        usedQty: parsedUsedQty,
+        recipeYield: parsedYield,
+        costPerProduct,
+        usedCost,
         date: costDate
       });
     }

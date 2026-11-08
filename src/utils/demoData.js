@@ -57,10 +57,70 @@ export function getDemoState() {
   ];
 
   const costs = [
-    { id: uid(), ts, item: 'Chocolate em barra', qty: 2, total: 52, date: addDays(t, -7) },
-    { id: uid(), ts: ts + 1, item: 'Biscoito maisena', qty: 6, total: 21, date: addDays(t, -7) },
-    { id: uid(), ts: ts + 2, item: 'Leite condensado', qty: 10, total: 68, date: addDays(t, -6) },
-    { id: uid(), ts: ts + 3, item: 'Caixinhas de embalagem', qty: 50, total: 35, date: addDays(t, -4) }
+    {
+      id: uid(),
+      ts,
+      item: 'Chocolate em barra',
+      packageType: 'cx',
+      packagesCount: 1,
+      packageWeight: 400,
+      unit: 'g',
+      qty: 400,
+      total: 20,
+      usedQty: 350,
+      recipeYield: 25,
+      costPerProduct: 0.70,
+      usedCost: 17.50,
+      date: addDays(t, -7)
+    },
+    {
+      id: uid(),
+      ts: ts + 1,
+      item: 'Leite condensado',
+      packageType: 'lata',
+      packagesCount: 2,
+      packageWeight: 395,
+      unit: 'g',
+      qty: 790,
+      total: 16,
+      usedQty: 395,
+      recipeYield: 25,
+      costPerProduct: 0.32,
+      usedCost: 8.00,
+      date: addDays(t, -6)
+    },
+    {
+      id: uid(),
+      ts: ts + 2,
+      item: 'Biscoito maisena',
+      packageType: 'pct',
+      packagesCount: 1,
+      packageWeight: 400,
+      unit: 'g',
+      qty: 400,
+      total: 6,
+      usedQty: 200,
+      recipeYield: 25,
+      costPerProduct: 0.12,
+      usedCost: 3.00,
+      date: addDays(t, -7)
+    },
+    {
+      id: uid(),
+      ts: ts + 3,
+      item: 'Caixinhas de embalagem',
+      packageType: 'un',
+      packagesCount: 50,
+      packageWeight: null,
+      unit: 'un',
+      qty: 50,
+      total: 25,
+      usedQty: 25,
+      recipeYield: 25,
+      costPerProduct: 0.50,
+      usedCost: 12.50,
+      date: addDays(t, -4)
+    }
   ];
 
   return {

@@ -20,7 +20,8 @@ import {
   calculateMonthlyResult,
   calculateBreakevenPoint,
   calculatePriceFromMargin,
-  calculateMarginFromPrice
+  calculateMarginFromPrice,
+  calculateCostPerProduct
 } from '../src/calculations/index.js';
 
 describe('Módulo de Dinheiro e Precisão em Centavos (money.js)', () => {
@@ -95,6 +96,25 @@ describe('Módulo de Produção e Fornada (productionCalculations.js)', () => {
     expect(summary.profitMarginPercent).toBe(67); // 4 / 6 ~= 66.67% -> 67%
     expect(summary.projectedRevenueCents).toBe(24000); // R$ 240,00 faturamento previsto
     expect(summary.projectedProfitCents).toBe(16000); // R$ 160,00 lucro previsto
+  });
+
+  it('calcula o custo por produto e proporção com base em quantidade usada e rendimento (ex: 1 cx de 400g usada 350g em 25 palhas)', () => {
+    const res = calculateCostPerProduct({
+      supplyTotal: 20.00,
+      packageWeight: 400,
+      packagesCount: 1,
+      usedQty: 350,
+      recipeYield: 25
+    });
+
+    expect(res.totalPurchased).toBe(400); // 400g compradas
+    expect(res.costPerUnitCents).toBe(5); // R$ 0,05 por grama (20,00 / 400)
+    expect(res.usedCostCents).toBe(1750); // R$ 17,50 usados na receita (350 * 0,05)
+    expect(res.usedCost).toBe(17.50);
+    expect(res.costPerProductCents).toBe(70); // R$ 0,70 por produto (17,50 / 25)
+    expect(res.costPerProduct).toBe(0.70);
+    expect(res.remainingQty).toBe(50); // Sobram 50g
+    expect(res.remainingCostCents).toBe(250); // Sobram R$ 2,50
   });
 });
 

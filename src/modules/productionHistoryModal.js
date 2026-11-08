@@ -39,9 +39,9 @@ export function openProductionHistoryModal({ state, flavorId = null }) {
     body = `
       <div class="list" style="background:none;border:0;box-shadow:none">
         ${reversedList.map((p, displayIdx) => {
-          const batchNum = p.batchNumber || (reversedList.length - displayIdx);
-          const ingredients = p.ingredients || [];
-          return `
+      const batchNum = p.batchNumber || (reversedList.length - displayIdx);
+      const ingredients = p.ingredients || [];
+      return `
             <div class="card" style="padding:14px;margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                 <span class="pill good" style="font-size:12.5px;padding:3px 10px">
@@ -74,14 +74,14 @@ export function openProductionHistoryModal({ state, flavorId = null }) {
                 </div>
                 <div style="display:grid;gap:6px;font-size:13px;background:var(--field);padding:10px;border-radius:12px">
                   ${ingredients.map(ing => {
-                    const u = ing.unit || 'g';
-                    return `
+        const u = ing.unit || 'g';
+        return `
                       <div style="display:flex;justify-content:space-between;align-items:center">
                         <span>• <b>${esc(ing.item)}</b>: ${ing.qty} ${esc(u)}</span>
                         <b style="color:var(--ink)">${formatMoney(ing.total)}</b>
                       </div>
                     `;
-                  }).join('')}
+      }).join('')}
                 </div>
               ` : ''}
 
@@ -92,7 +92,7 @@ export function openProductionHistoryModal({ state, flavorId = null }) {
               ` : ''}
             </div>
           `;
-        }).join('')}
+    }).join('')}
       </div>
     `;
   }

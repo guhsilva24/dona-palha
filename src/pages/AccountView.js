@@ -309,3 +309,4 @@ export function bindAccountViewEvents({ container, user, state, onUserChanged, o
     });
   }
 }
+
