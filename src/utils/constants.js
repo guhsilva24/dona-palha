@@ -18,14 +18,15 @@ export const PAYMENT_METHODS = [
   'Outro'
 ];
 
-export const VIEWS = ['inicio', 'vendas', 'geral', 'sabores', 'custos'];
+export const VIEWS = ['inicio', 'vendas', 'geral', 'sabores', 'custos', 'conta'];
 
 export const TABS = [
   { id: 'inicio', label: 'Início', icon: 'home' },
   { id: 'vendas', label: 'Vendas', icon: 'bag' },
   { id: 'geral', label: 'Visão geral', icon: 'grid' },
   { id: 'sabores', label: 'Sabores', icon: 'layers' },
-  { id: 'custos', label: 'Custos', icon: 'receipt' }
+  { id: 'custos', label: 'Custos', icon: 'receipt' },
+  { id: 'conta', label: 'Conta', icon: 'user' }
 ];
 
 export const PERIOD_OPTIONS = [

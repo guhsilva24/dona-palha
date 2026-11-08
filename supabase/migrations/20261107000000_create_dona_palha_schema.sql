@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS public.production_ingredients (
   production_id UUID NOT NULL REFERENCES public.productions(id) ON DELETE CASCADE,
   cost_id UUID REFERENCES public.costs(id) ON DELETE SET NULL,
   item_name TEXT NOT NULL,
+  unit_used TEXT DEFAULT 'g',
   qty_used NUMERIC NOT NULL CHECK (qty_used > 0),
   unit_cost_cents INTEGER NOT NULL CHECK (unit_cost_cents >= 0),
   total_cost_cents INTEGER NOT NULL CHECK (total_cost_cents >= 0),
@@ -311,12 +312,12 @@ BEGIN
   -- Registra os ingredientes utilizados a partir do JSONB
   IF p_ingredients IS NOT NULL AND jsonb_array_length(p_ingredients) > 0 THEN
     FOR v_ing IN SELECT * FROM jsonb_to_recordset(p_ingredients) AS x(
-      cost_id UUID, item_name TEXT, qty_used NUMERIC, unit_cost_cents INTEGER, total_cost_cents INTEGER
+      cost_id UUID, item_name TEXT, unit_used TEXT, qty_used NUMERIC, unit_cost_cents INTEGER, total_cost_cents INTEGER
     ) LOOP
       INSERT INTO public.production_ingredients (
-        production_id, cost_id, item_name, qty_used, unit_cost_cents, total_cost_cents
+        production_id, cost_id, item_name, unit_used, qty_used, unit_cost_cents, total_cost_cents
       ) VALUES (
-        v_prod_id, v_ing.cost_id, v_ing.item_name, v_ing.qty_used, v_ing.unit_cost_cents, v_ing.total_cost_cents
+        v_prod_id, v_ing.cost_id, v_ing.item_name, COALESCE(v_ing.unit_used, 'g'), v_ing.qty_used, v_ing.unit_cost_cents, v_ing.total_cost_cents
       );
     END LOOP;
   END IF;

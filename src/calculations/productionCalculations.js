@@ -1,7 +1,7 @@
 /**
  * Módulo de Cálculos de Produção, Fornada e Precificação por Margem
- * Realiza cálculos proporcionais de ingredientes (com suporte a gramas, kg, ml, un),
- * custos de lote, rendimento e precificação por margem de lucro.
+ * Realiza cálculos proporcionais de ingredientes (com suporte a caixas de X gramas, kg, ml, un),
+ * custos de lote, rendimento sequencial (Fornada 1, Fornada 2...) e precificação por margem de lucro.
  */
 
 import { toCents, addCents, subtractCents, multiplyCents, divideCents, fromCents } from './money.js';
@@ -39,29 +39,42 @@ export function calculateSupplyUnitCost(totalCost, totalQty) {
 }
 
 /**
- * Calcula o custo proporcional exato de um ingrediente utilizado na receita,
- * com suporte completo a unidades (gramas, kg, ml, un, etc.).
- *
- * Exemplo 1: Comprou 1000g por R$ 30,00 e usou 200g -> R$ 6,00.
- * Exemplo 2: Comprou 1kg por R$ 30,00 e usou 200g -> R$ 6,00.
+ * Calcula o custo proporcional exato de um ingrediente utilizado na receita.
+ * Suporta compra em caixas/pacotes com peso em gramas:
+ * Exemplo real:
+ * - Comprou 1 caixa de chocolate de 400g por R$ 20,00
+ * - Usou 350g em uma fornada
+ * -> Custo proporcional = (R$ 20,00 / 400g) * 350g = R$ 17,50
  *
  * @param {Object} params
  * @param {number|string} params.supplyTotal Valor total pago no insumo
- * @param {number} params.supplyQty Quantidade total comprada
+ * @param {number} params.supplyQty Quantidade total comprada (ou peso líquido)
  * @param {string} [params.supplyUnit='g'] Unidade comprada ('g', 'kg', 'un', 'ml', 'l')
- * @param {number} params.usedQty Quantidade utilizada na receita
+ * @param {number} [params.packageWeight] Peso em gramas por embalagem (ex: 400g)
+ * @param {number} [params.packagesCount] Número de embalagens compradas (ex: 1)
+ * @param {number} params.usedQty Quantidade utilizada na receita (ex: 350)
  * @param {string} [params.usedUnit] Unidade utilizada (se omitido, usa supplyUnit)
- * @returns {Object} { unitCostCents, lineCostCents, unitCost, lineCost, formattedRatio }
+ * @returns {Object} { unitCostCents, lineCostCents, unitCost, lineCost, totalSupplyGrams }
  */
 export function calculateIngredientCost({
   supplyTotal,
   supplyQty,
   supplyUnit = 'g',
+  packageWeight = null,
+  packagesCount = null,
   usedQty,
   usedUnit = null
 }) {
   const supplyTotalCents = toCents(supplyTotal);
-  const supQty = Number(supplyQty) || 0;
+  let supQty = Number(supplyQty) || 0;
+
+  // Se informou caixas e peso por caixa (ex: 1 caixa de 400g)
+  const pkgWeight = Number(packageWeight) || 0;
+  const pkgCount = Number(packagesCount) || 0;
+  if (pkgWeight > 0) {
+    supQty = (pkgCount > 0 ? pkgCount : 1) * pkgWeight;
+  }
+
   const used = Number(usedQty) || 0;
   const targetUsedUnit = usedUnit || supplyUnit;
 
@@ -70,15 +83,16 @@ export function calculateIngredientCost({
       unitCostCents: 0,
       lineCostCents: 0,
       unitCost: 0,
-      lineCost: 0
+      lineCost: 0,
+      totalSupplyGrams: supQty
     };
   }
 
-  // Fator de conversão (ex: 1 kg comprado = 1000g de base)
+  // Fator de conversão (ex: kg -> g)
   const ratio = normalizeUnitRatio(supplyUnit, targetUsedUnit);
   const normalizedSupplyQty = supQty * ratio;
 
-  // Custo por unidade em centavos: (supplyTotalCents * used) / normalizedSupplyQty
+  // Custo proporcional exato: (supplyTotalCents * used) / normalizedSupplyQty
   const lineCostCents = Math.round((supplyTotalCents * used) / normalizedSupplyQty);
   const unitCostCents = Math.round(supplyTotalCents / normalizedSupplyQty);
 
@@ -86,7 +100,8 @@ export function calculateIngredientCost({
     unitCostCents,
     lineCostCents,
     unitCost: fromCents(unitCostCents),
-    lineCost: fromCents(lineCostCents)
+    lineCost: fromCents(lineCostCents),
+    totalSupplyGrams: normalizedSupplyQty
   };
 }
 
@@ -102,6 +117,8 @@ export function calculateBatchIngredients(ingredients = []) {
       supplyTotal: ing.supplyTotal ?? ing.total,
       supplyQty: ing.supplyQty ?? ing.qty,
       supplyUnit: ing.supplyUnit ?? ing.unit ?? 'g',
+      packageWeight: ing.packageWeight,
+      packagesCount: ing.packagesCount,
       usedQty: ing.usedQty,
       usedUnit: ing.usedUnit ?? ing.unit ?? 'g'
     });
@@ -163,6 +180,20 @@ export function calculateBatchSummary({ batchCostCents, batchUnits, sellingPrice
 }
 
 /**
+ * Determina o número sequencial da próxima fornada (ex: Fornada 1, Fornada 2, etc.)
+ * @param {Array<Object>} productions Lista de fornadas cadastradas
+ * @param {string} [flavorId] ID do sabor opcional para contagem por sabor
+ * @returns {number}
+ */
+export function getNextBatchNumber(productions = [], flavorId = null) {
+  if (!Array.isArray(productions)) return 1;
+  const list = flavorId
+    ? productions.filter(p => p.flavorId === flavorId)
+    : productions;
+  return list.length + 1;
+}
+
+/**
  * Calcula o preço de venda sugerido a partir do custo e da margem de lucro desejada (%)
  * Fórmula de Margem Comercial: Preço = Custo / (1 - Margem/100)
  * @param {Object} params
@@ -196,7 +227,7 @@ export function calculatePriceFromMargin({ cost, marginPercent }) {
     suggestedPrice: fromCents(priceCents),
     profitCents,
     profit: fromCents(profitCents),
-    marginPercent: margin,
+    marginPercent,
     markupPercent
   };
 }

@@ -16,6 +16,12 @@ export function renderFab(activeView = 'inicio', onFabClick) {
   const fabEl = document.getElementById('fab');
   if (!fabEl) return;
 
+  if (activeView === 'conta') {
+    fabEl.style.display = 'none';
+    return;
+  }
+  fabEl.style.display = '';
+
   const config = FAB_CONFIG[activeView] || FAB_CONFIG.inicio;
   fabEl.innerHTML = `${I(config.icon)} ${config.label}`;
   fabEl.dataset.act = config.action;

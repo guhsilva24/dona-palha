@@ -23,6 +23,7 @@ import { renderSalesView } from './pages/SalesView.js';
 import { renderGeneralView } from './pages/GeneralView.js';
 import { renderFlavorsView } from './pages/FlavorsView.js';
 import { renderCostsView } from './pages/CostsView.js';
+import { renderAccountView, bindAccountViewEvents } from './pages/AccountView.js';
 
 import { openSaleModal, openSaleDetailModal } from './modules/salesModal.js';
 import { openFlavorModal } from './modules/flavorModal.js';
@@ -141,6 +142,10 @@ class AppController {
       custos: [
         'Custos',
         `${this.state.costs.length} ${this.state.costs.length === 1 ? 'compra' : 'compras'} · ${formatMoney(totalCosts)} gastos`
+      ],
+      conta: [
+        'Conta & Nuvem',
+        this.user ? `Conectado como ${this.user.email}` : 'Autenticação e sincronização com Supabase'
       ]
     };
 
@@ -187,18 +192,7 @@ class AppController {
         this.renderViewContent();
       },
       onSyncClick: () => {
-        openAuthModal({
-          user: this.user,
-          state: this.state,
-          onUserChanged: newUser => {
-            this.user = newUser;
-            this.render();
-          },
-          onDataReload: freshState => {
-            this.state = freshState;
-            this.render();
-          }
-        });
+        window.location.hash = '#conta';
       }
     });
 
@@ -256,11 +250,33 @@ class AppController {
           query: this.query
         });
         break;
+      case 'conta':
+        content = renderAccountView({
+          user: this.user,
+          state: this.state
+        });
+        break;
       default:
         content = '';
     }
 
     container.innerHTML = content;
+
+    if (this.currentView === 'conta') {
+      bindAccountViewEvents({
+        container,
+        user: this.user,
+        state: this.state,
+        onUserChanged: newUser => {
+          this.user = newUser;
+          this.render();
+        },
+        onDataReload: freshState => {
+          this.state = freshState;
+          this.render();
+        }
+      });
+    }
   }
 
   handleFabAction(action) {

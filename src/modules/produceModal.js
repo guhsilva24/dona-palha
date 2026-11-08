@@ -1,7 +1,6 @@
 /**
- * Módulo de Produção de Fornada
- * Seleciona ingredientes cadastrados em custos com suas unidades e gramas,
- * calcula proporções exatas, rendimento de palhas, custo real unitário e projeções.
+ * Módulo de Produção de Fornadas (Fornada 1, Fornada 2...)
+ * Suporta ingredientes com embalagens e gramas (ex: 1 cx de 400g e usa 350g em fornada de 25 palhas)
  */
 
 import { openSheet, closeSheet } from '../components/BottomSheet.js';
@@ -11,7 +10,8 @@ import {
   formatMoney,
   calculateIngredientCost,
   calculateBatchSummary,
-  calculateWeightedAverageCost
+  calculateWeightedAverageCost,
+  getNextBatchNumber
 } from '../calculations/index.js';
 import { today, num, esc } from '../utils/formatters.js';
 
@@ -43,9 +43,16 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
     return state.costs.map(c => {
       const u = c.unit || (c.item?.toLowerCase().includes('embal') ? 'un' : 'g');
       const unitCost = c.qty > 0 ? c.total / c.qty : 0;
+      let label = `${esc(c.item)}`;
+      if (c.packagesCount && c.packageWeight) {
+        label += ` (${c.packagesCount} cx de ${c.packageWeight}g)`;
+      } else {
+        label += ` (${c.qty} ${esc(u)})`;
+      }
+      label += ` — ${formatMoney(unitCost)}/${esc(u)}`;
       return `
         <option value="${esc(c.id)}" ${String(c.id) === String(selectedCostId) ? 'selected' : ''}>
-          ${esc(c.item)} — ${c.qty} ${esc(u)} (${formatMoney(unitCost)}/${esc(u)})
+          ${label}
         </option>
       `;
     }).join('');
@@ -54,7 +61,11 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
   function renderRowsHtml() {
     return rows.map((r, index) => {
       const selectedCost = state.costs.find(c => String(c.id) === String(r.costId)) || state.costs[0];
-      const u = selectedCost?.unit || (selectedCost?.item?.toLowerCase().includes('embal') ? 'un' : 'g');
+      const u = selectedCost?.unit || 'g';
+      const placeholder = selectedCost?.packageWeight
+        ? `Ex: 350 (de ${selectedCost.packageWeight}g da caixa)`
+        : `Ex: 350 (${esc(u)})`;
+
       return `
         <div class="card" style="padding:12px;margin:0 0 10px" data-ing-row="${index}">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -70,10 +81,10 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
           </div>
           <div class="field" style="margin-bottom:0">
             <label>Quantidade utilizada (${esc(u)})</label>
-            <input data-ing-qty inputmode="decimal" placeholder="Ex.: 200 (${esc(u)})" value="${esc(r.qty)}">
+            <input data-ing-qty inputmode="decimal" placeholder="${placeholder}" value="${esc(r.qty)}">
           </div>
           <div class="subline">
-            <span>Custo proporcional</span>
+            <span>Custo proporcional usado</span>
             <b data-ing-total>R$ 0,00</b>
           </div>
         </div>
@@ -81,21 +92,29 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
     }).join('');
   }
 
+  const initialBatchNum = getNextBatchNumber(state.productions, f0.id);
+
   const body = `
     <form id="f-prod" novalidate>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span class="pill good" id="p-batch-pill" style="font-size:13px;padding:4px 12px">
+          Fornada ${initialBatchNum}
+        </span>
+        ${(state.productions || []).length > 0 ? `
+          <button class="link" type="button" id="p-btn-history">Ver fornadas anteriores</button>
+        ` : ''}
+      </div>
+
       <div class="field">
         <label for="p-flavor">Sabor que está sendo produzido <span class="req">*</span></label>
         <select id="p-flavor">${flavorOptions(f0.id)}</select>
       </div>
 
       <div class="sec-h" style="margin-top:8px">
-        <h2>Ingredientes da fornada</h2>
-        ${(state.productions || []).length > 0 ? `
-          <button class="link" type="button" id="p-btn-history">Ver histórico</button>
-        ` : ''}
+        <h2>Ingredientes desta fornada</h2>
       </div>
       <p class="hint" style="margin:0 0 12px">
-        Selecione o insumo e informe a quantidade de gramas (ou unidades) usada nesta fornada. O sistema calcula a proporção exata do custo.
+        Selecione o insumo e informe quantas gramas utilizou (ex.: comprou 1 cx de 400g, porém usou 350g). O sistema calcula o custo exato.
       </p>
 
       <div id="p-ingredients">${renderRowsHtml()}</div>
@@ -104,8 +123,8 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
       </button>
 
       <div class="field">
-        <label for="p-qty">Quantas palhas essa fornada rendeu? <span class="req">*</span></label>
-        <input id="p-qty" inputmode="numeric" placeholder="Ex.: 40">
+        <label for="p-qty" id="p-qty-label">Quantas palhas essa Fornada ${initialBatchNum} rendeu? <span class="req">*</span></label>
+        <input id="p-qty" inputmode="numeric" placeholder="Ex.: 25">
       </div>
 
       <div class="sum3">
@@ -123,16 +142,29 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
       <p class="msg" id="p-warn" hidden></p>
 
       <button class="btn primary block" type="submit" id="p-submit">
-        Registrar produção e atualizar estoque
+        Registrar Fornada e atualizar estoque
       </button>
     </form>
   `;
 
   openSheet({
-    title: 'Nova produção de fornada',
+    title: 'Nova Produção',
     body,
     mount(b) {
       const g = id => b.querySelector('#' + id);
+
+      function getCurrentBatchNum() {
+        const flavorId = g('p-flavor').value;
+        return getNextBatchNumber(state.productions, flavorId);
+      }
+
+      function updateBatchLabels() {
+        const num = getCurrentBatchNum();
+        const pill = g('p-batch-pill');
+        const qtyLabel = g('p-qty-label');
+        if (pill) pill.textContent = `Fornada ${num}`;
+        if (qtyLabel) qtyLabel.innerHTML = `Quantas palhas essa <b>Fornada ${num}</b> rendeu? <span class="req">*</span>`;
+      }
 
       function calculateState() {
         let totalCostCents = 0;
@@ -161,6 +193,8 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
             supplyTotal: costItem.total,
             supplyQty: costItem.qty,
             supplyUnit: costItem.unit || 'g',
+            packageWeight: costItem.packageWeight,
+            packagesCount: costItem.packagesCount,
             usedQty: q,
             usedUnit: costItem.unit || 'g'
           });
@@ -198,7 +232,8 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
         g('p-lot-profit').textContent = isValid ? formatMoney(summary.projectedProfit) : '—';
 
         if (flavor) {
-          g('p-hint').textContent = `Preço de venda: ${formatMoney(flavor.price)} por palha. O custo real será ponderado com as ${flavor.stock} unidades existentes no estoque.`;
+          const num = getCurrentBatchNum();
+          g('p-hint').textContent = `Preço de venda: ${formatMoney(flavor.price)} cada. Ao salvar a Fornada ${num}, o estoque aumentará em ${producedUnits || 0} un e o custo médio ponderado será recalculado.`;
         }
 
         return {
@@ -253,8 +288,12 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
         bindRows();
       });
 
+      g('p-flavor').addEventListener('change', () => {
+        updateBatchLabels();
+        calculateState();
+      });
+
       g('p-qty').addEventListener('input', calculateState);
-      g('p-flavor').addEventListener('change', calculateState);
       bindRows();
 
       g('f-prod').addEventListener('submit', async e => {
@@ -273,28 +312,33 @@ export function openProduceModal({ state, preFlavorId, user, onSaved, onGoCosts,
         submitBtn.disabled = true;
         submitBtn.textContent = 'Gravando fornada…';
 
+        const batchNum = getCurrentBatchNum();
+        const totalBatchCount = getNextBatchNumber(state.productions);
+
         try {
           await dbService.saveProduction({
             productionData: {
               flavorId: res.flavor.id,
+              batchNumber: batchNum,
+              globalBatchNumber: totalBatchCount,
               qty: res.producedUnits,
               batchCostCents: res.totalCostCents,
               ingredients: res.ingredientsList,
               date: today(),
-              notes: `Fornada de ${res.producedUnits} un`
+              notes: `Fornada ${batchNum} (${res.producedUnits} palhas produzidas)`
             },
             user,
             state
           });
 
           closeSheet();
-          showToast(`Produção registrada! Custo real: ${formatMoney(res.summary.unitCost)} / un`);
+          showToast(`Fornada ${batchNum} registrada! Custo real: ${formatMoney(res.summary.unitCost)} / un`);
           if (typeof onSaved === 'function') onSaved();
         } catch (err) {
           warnEl.hidden = false;
           warnEl.textContent = err.message || 'Erro ao registrar produção.';
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Registrar produção e atualizar estoque';
+          submitBtn.textContent = 'Registrar Fornada e atualizar estoque';
         }
       });
     }

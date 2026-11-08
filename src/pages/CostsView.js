@@ -55,16 +55,20 @@ export function renderCostsView({ state, query = '' }) {
       ${list.map(c => {
         const u = c.unit || (c.item?.toLowerCase().includes('embal') ? 'un' : 'g');
         const unitCost = c.qty > 0 ? c.total / c.qty : 0;
+        let desc = `${c.qty} ${esc(u)}`;
+        if (c.packagesCount && c.packageWeight) {
+          desc = `${c.packagesCount} ${esc(c.packageType || 'cx')} de ${c.packageWeight}g (${c.qty}g total)`;
+        }
         return `
           <button class="row tone-sky" type="button" data-act="editCost" data-id="${c.id}">
             <span class="av">${I('receipt')}</span>
             <span class="row-m">
               <span class="row-t">${esc(c.item)}</span>
-              <span class="row-s">${c.qty} ${esc(u)} · ${formatMoney(c.total)} · ${shortDate(c.date)}</span>
+              <span class="row-s">${desc} · ${formatMoney(c.total)} · ${shortDate(c.date)}</span>
             </span>
             <span class="row-r">
               <b>${formatMoney(unitCost)}</b>
-              <span class="row-s">por ${esc(u)}</span>
+              <span class="row-s">${u === 'g' ? 'por grama' : 'por ' + esc(u)}</span>
             </span>
           </button>
         `;
