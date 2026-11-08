@@ -88,3 +88,4 @@ export function renderFlavorsView({ state, query = '' }) {
 
   return html;
 }
+

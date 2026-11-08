@@ -139,3 +139,4 @@ export function getStockStatus(stock, threshold = 5) {
   if (s <= threshold) return 'low_stock';
   return 'normal';
 }
+

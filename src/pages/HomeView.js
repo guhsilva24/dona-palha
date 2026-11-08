@@ -300,3 +300,4 @@ export function getDatesForPeriod(period, customFrom, customTo) {
   const b = customTo || t;
   return a <= b ? [a, b] : [b, a];
 }
+

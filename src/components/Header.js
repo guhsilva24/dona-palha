@@ -80,3 +80,4 @@ export function updateSyncBadge(statusKey, customText = null) {
   syncEl.textContent = customText || defaultText;
   syncEl.dataset.k = kind;
 }
+

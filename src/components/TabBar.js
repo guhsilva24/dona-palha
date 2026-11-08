@@ -19,3 +19,4 @@ export function renderTabBar(activeView = 'inicio') {
     `;
   }).join('');
 }
+

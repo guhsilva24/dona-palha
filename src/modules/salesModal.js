@@ -378,3 +378,4 @@ export function openSaleDetailModal({ state, saleId, user, onUpdated, onDeleted 
     }
   });
 }
+

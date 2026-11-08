@@ -41,3 +41,4 @@ export function I(name, extraClass = '') {
   const className = extraClass ? `i ${extraClass}` : 'i';
   return `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true">${content}</svg>`;
 }
+

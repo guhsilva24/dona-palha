@@ -28,3 +28,4 @@ export function renderFab(activeView = 'inicio', onFabClick) {
     }
   };
 }
+

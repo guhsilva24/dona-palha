@@ -222,3 +222,4 @@ export function renderGeneralView({ state, period, customFrom, customTo, selecte
   html += `</div>`;
   return html;
 }
+

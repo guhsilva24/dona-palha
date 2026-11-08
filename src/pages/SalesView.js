@@ -170,3 +170,4 @@ export function renderSalesView({ state, filter = 'todas', query = '' }) {
 
   return html;
 }
+

@@ -68,3 +68,4 @@ describe('Migração e Preservação de Dados (storageService.js)', () => {
     expect(normalizedPartial.flavors).toEqual([]);
   });
 });
+

@@ -101,8 +101,8 @@ cp .env.example .env
 ```
 Preencha com os dados obtidos em **Project Settings > API**:
 ```env
-VITE_SUPABASE_URL=https://seu-projeto.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=sua-anon-public-key
+VITE_SUPABASE_URL=https://uadfjhamlmepzfqjqcqj.supabase.co/rest/v1/
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_Rg-lgBLE8ZBIHskHsGgKfQ_8I9KWDPi
 ```
 
 > **Aviso de Segurança:** Nunca utilize a chave `service_role` no frontend. Apenas a chave pública (`anon`) deve ser informada.

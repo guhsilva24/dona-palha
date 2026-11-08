@@ -36,3 +36,4 @@ export function armDelete(btn, onConfirmed) {
     }
   });
 }
+

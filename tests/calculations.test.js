@@ -236,3 +236,4 @@ describe('Módulo de Ponto de Equilíbrio (breakevenCalculations.js)', () => {
     expect(be.isCovered).toBe(true);
   });
 });
+

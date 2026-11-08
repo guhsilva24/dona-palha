@@ -48,3 +48,4 @@ export const STOCK_ADJUSTMENT_REASONS = [
   'Consumo próprio',
   'Outro'
 ];
+

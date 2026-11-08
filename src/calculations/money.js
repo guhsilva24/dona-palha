@@ -124,3 +124,4 @@ export function divideCents(cents, divisor) {
   if (!divisor || divisor === 0) return 0;
   return Math.round(cents / divisor);
 }
+

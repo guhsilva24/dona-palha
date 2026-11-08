@@ -125,3 +125,4 @@ export function calculateBatchSummary({ batchCostCents, batchUnits, sellingPrice
     projectedProfit: fromCents(projectedProfitCents)
   };
 }
+

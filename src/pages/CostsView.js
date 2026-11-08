@@ -72,3 +72,4 @@ export function renderCostsView({ state, query = '' }) {
 
   return html;
 }
+

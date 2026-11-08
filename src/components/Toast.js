@@ -16,3 +16,4 @@ export function showToast(message, duration = 2800) {
     toastEl.hidden = true;
   }, duration);
 }
+

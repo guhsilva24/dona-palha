@@ -252,3 +252,4 @@ export function calculateMonthlyResult({ sales = [], costs = [], yearMonth }) {
     isPositive: resCents >= 0
   };
 }
+

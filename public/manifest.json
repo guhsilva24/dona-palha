@@ -1,0 +1,17 @@
+{
+  "name": "Dona Palha",
+  "short_name": "Dona Palha",
+  "description": "Sistema de gestão financeira e produção artesanal de palha italiana",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F6F4FD",
+  "theme_color": "#4A2BC0",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
