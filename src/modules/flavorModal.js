@@ -1,174 +1,125 @@
 /**
- * Módulo de Cadastro e Edição de Sabor com Precificação por Margem de Lucro (%)
+ * Módulo de Cadastro e Edição de Sabores
+ * Simples, limpo e direto ao ponto.
+ * A margem de lucro padrão é configurada na aba Ajustes/Configurações.
  */
 
 import { openSheet, closeSheet } from '../components/BottomSheet.js';
 import { showToast } from '../components/Toast.js';
 import { dbService } from '../services/dbService.js';
-import {
-  formatMoney,
-  moneyToInput,
-  calculatePriceFromMargin,
-  calculateMarginFromPrice
-} from '../calculations/index.js';
+import { formatMoney, moneyToInput } from '../calculations/index.js';
 import { num, esc } from '../utils/formatters.js';
-import { TONES, MARGIN_PRESETS } from '../utils/constants.js';
+import { TONES } from '../utils/constants.js';
 import { armDelete } from '../utils/dom.js';
+import { I } from '../utils/icons.js';
 
 export function openFlavorModal({ state, flavorId, user, onSaved, onDeleted, onProduceClick, onAdjustStockClick }) {
   const flavor = flavorId ? state.flavors.find(f => f.id === flavorId) : null;
   const currentCost = flavor ? Number(flavor.cost) || 0 : 0;
-  const initialMargin = flavor && flavor.price > 0 && currentCost > 0
-    ? Math.round(((flavor.price - currentCost) / flavor.price) * 100)
-    : 50;
+  const currentPrice = flavor ? Number(flavor.price) || 0 : 0;
+  const currentStock = flavor ? Number(flavor.stock) || 0 : 0;
+  const defaultTone = flavor ? (flavor.tone || 'lav') : TONES[state.flavors.length % TONES.length];
 
   const body = `
     <form id="f-fl" novalidate>
       <div class="field">
         <label for="f-name">Nome do sabor <span class="req">*</span></label>
-        <input id="f-name" autocomplete="off" placeholder="Ex.: Tradicional, Ninho com Nutella, Maracujá" value="${flavor ? esc(flavor.name) : ''}">
-      </div>
-
-      <!-- Ajuste da Margem de Lucro Desejada -->
-      <div class="card" style="padding:12px;margin:0 0 14px;background:var(--field);border:1px solid var(--line)">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <label style="font-size:13px;font-weight:700;margin:0">Definir Margem de Lucro Desejada (%)</label>
-          <span class="pill good" id="f-margin-badge">${initialMargin}%</span>
-        </div>
-
-        <div class="chips" style="margin-bottom:8px">
-          ${MARGIN_PRESETS.map(m => `
-            <button class="chip" type="button" data-margin-preset="${m}" aria-pressed="${m === initialMargin}">
-              ${m}%
-            </button>
-          `).join('')}
-        </div>
-
-        <div class="field" style="margin-bottom:0">
-          <label for="f-margin-input" style="font-size:12px">Margem de lucro personalizada (%)</label>
-          <div class="pre">
-            <span>%</span>
-            <input id="f-margin-input" inputmode="numeric" type="number" min="1" max="95" value="${initialMargin}" placeholder="50">
-          </div>
-        </div>
+        <input id="f-name" autocomplete="off" placeholder="Ex.: Tradicional, Ninho com Nutella, Oreo, Maracujá" value="${flavor ? esc(flavor.name) : ''}">
       </div>
 
       <div class="field">
-        <label for="f-price">Preço de venda (por palha) <span class="req">*</span></label>
+        <label for="f-price">Preço de venda (por cada palha) <span class="req">*</span></label>
         <div class="pre">
           <span>R$</span>
-          <input id="f-price" inputmode="decimal" placeholder="0,00" value="${flavor ? moneyToInput(flavor.price) : ''}">
+          <input id="f-price" inputmode="decimal" placeholder="Ex: 3,50" value="${currentPrice > 0 ? moneyToInput(currentPrice) : ''}">
         </div>
       </div>
 
-      <div class="sum3">
-        <div><span>Custo por palha</span><b id="f-ucost">${flavor && currentCost > 0 ? formatMoney(currentCost) : 'Calculado na fornada'}</b></div>
-        <div><span>Lucro por palha</span><b id="f-uprofit">—</b></div>
-        <div><span>Margem calculada</span><b id="f-margin">—</b></div>
+      <div class="field">
+        <label for="f-stock">Quantidade de palhas prontas em estoque</label>
+        <input id="f-stock" inputmode="numeric" placeholder="0" value="${currentStock}">
+        <span class="muted" style="font-size:12px;margin-top:4px;display:block">
+          💡 Dica: Se você for fazer as palhas agora, pode deixar 0 e registrar a produção clicando em <b>Produzir Fornada</b>!
+        </span>
       </div>
 
-      <p class="hint" style="margin:-6px 0 14px">
-        Ao alterar a margem (%), o preço de venda é calculado automaticamente. Você também pode digitar o preço livremente.
-      </p>
-
-      <div class="field">
-        <label for="f-stock">Quantidade em estoque</label>
-        <input id="f-stock" inputmode="numeric" value="${flavor ? flavor.stock : 0}">
+      <!-- RESUMO VISUAL DO SABOR -->
+      <div class="card" style="padding:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:center">
+          <div style="border-right:1px solid var(--line);padding-right:8px">
+            <span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;display:block">
+              Custo por Palha
+            </span>
+            <b style="font-size:18px;display:block;margin:2px 0" id="f-card-cost">
+              ${currentCost > 0 ? formatMoney(currentCost) : '—'}
+            </b>
+            <span class="muted" style="font-size:11px" id="f-card-cost-sub">
+              ${currentCost > 0 ? 'calculado na fornada' : 'será calculado na fornada'}
+            </span>
+          </div>
+          <div>
+            <span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;display:block">
+              Lucro Estimado
+            </span>
+            <b style="font-size:18px;display:block;margin:2px 0" id="f-card-profit">
+              —
+            </b>
+            <span class="muted" style="font-size:11px">
+              por palha vendida
+            </span>
+          </div>
+        </div>
       </div>
 
       <p class="msg" id="f-warn" hidden></p>
 
       <div class="actions">
         <button class="btn primary block" type="submit" id="f-submit">
-          ${flavor ? 'Salvar sabor' : 'Cadastrar sabor'}
+          ${I('check')} ${flavor ? 'Salvar Alterações' : 'Cadastrar Sabor'}
         </button>
+
         ${flavor ? `
           <div class="grid2">
-            <button class="btn" type="button" id="f-btn-produce">Produzir Fornada</button>
-            <button class="btn" type="button" id="f-btn-adjust">Ajustar Estoque / Perdas</button>
+            <button class="btn" type="button" id="f-btn-produce" style="background:var(--brand-soft);color:var(--brand);font-weight:700">
+              ${I('plus')} Produzir Fornada
+            </button>
+            <button class="btn" type="button" id="f-btn-adjust">
+              Ajustar Estoque
+            </button>
           </div>
-          <button class="btn danger block" type="button" id="f-del">Excluir sabor</button>
+          <button class="btn danger block" type="button" id="f-del">
+            ${I('trash')} Excluir sabor
+          </button>
         ` : ''}
       </div>
     </form>
   `;
 
   openSheet({
-    title: flavor ? 'Editar sabor' : 'Novo sabor',
+    title: flavor ? 'Editar Sabor' : 'Novo Sabor',
     body,
     mount(b) {
       const g = id => b.querySelector('#' + id);
-      let isUpdatingPrice = false;
 
-      function updateFromPrice() {
-        if (isUpdatingPrice) return;
+      function updateResumo() {
         const p = num(g('f-price').value);
-        const c = flavor ? Number(flavor.cost) || 0 : 0;
-        const marginCalc = calculateMarginFromPrice({ cost: c, price: p });
-
-        g('f-ucost').textContent = c > 0 ? formatMoney(c) : 'Calculado na fornada';
-        g('f-uprofit').textContent = Number.isFinite(p) && c > 0 ? formatMoney(marginCalc.profit) : '—';
-        g('f-uprofit').className = marginCalc.profit >= 0 ? 'pos' : 'neg';
-
-        const marginLabel = p > 0 && c > 0 ? `${marginCalc.marginPercent}%` : '—';
-        g('f-margin').textContent = marginLabel;
-        g('f-margin-badge').textContent = marginLabel !== '—' ? marginLabel : '50%';
-
-        if (p > 0 && c > 0) {
-          g('f-margin-input').value = marginCalc.marginPercent;
-          b.querySelectorAll('[data-margin-preset]').forEach(btn => {
-            btn.setAttribute('aria-pressed', String(Number(btn.dataset.marginPreset) === marginCalc.marginPercent));
-          });
-        }
-      }
-
-      function updateFromMargin(marginVal) {
-        const c = flavor ? Number(flavor.cost) || 0 : 0;
-        const m = Math.min(95, Math.max(1, parseFloat(String(marginVal).replace(',', '.')) || 0));
-
-        g('f-margin-badge').textContent = `${m}%`;
-        g('f-margin-input').value = m;
-
-        b.querySelectorAll('[data-margin-preset]').forEach(btn => {
-          btn.setAttribute('aria-pressed', String(Number(btn.dataset.marginPreset) === m));
-        });
-
-        // Se houver custo cadastrado, sugere o preço de venda baseado na margem
-        if (c > 0) {
-          isUpdatingPrice = true;
-          const priceCalc = calculatePriceFromMargin({ cost: c, marginPercent: m });
-          g('f-price').value = moneyToInput(priceCalc.suggestedPrice);
-          g('f-uprofit').textContent = formatMoney(priceCalc.profit);
-          g('f-uprofit').className = 'pos';
-          g('f-margin').textContent = `${m}%`;
-          isUpdatingPrice = false;
-        } else {
-          // Se ainda não houver custo, apenas calcula o lucro visual com base no preço atual
-          const p = num(g('f-price').value);
-          if (p > 0) {
-            g('f-margin').textContent = `${m}%`;
+        const c = currentCost;
+        if (Number.isFinite(p) && p > 0) {
+          if (c > 0) {
+            const profit = p - c;
+            g('f-card-profit').textContent = formatMoney(profit);
+            g('f-card-profit').className = profit >= 0 ? 'pos' : 'neg';
+          } else {
+            g('f-card-profit').textContent = formatMoney(p);
+            g('f-card-profit').className = 'pos';
           }
+        } else {
+          g('f-card-profit').textContent = '—';
         }
       }
 
-      // Presets de margem
-      b.querySelectorAll('[data-margin-preset]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          updateFromMargin(Number(btn.dataset.marginPreset));
-        });
-      });
-
-      // Digitação manual da margem
-      g('f-margin-input').addEventListener('input', e => {
-        const val = parseFloat(e.target.value);
-        if (Number.isFinite(val) && val > 0 && val < 99) {
-          updateFromMargin(val);
-        }
-      });
-
-      // Digitação do preço
-      g('f-price').addEventListener('input', updateFromPrice);
-      updateFromPrice();
+      g('f-price').addEventListener('input', updateResumo);
+      updateResumo();
 
       g('f-fl').addEventListener('submit', async e => {
         e.preventDefault();
@@ -179,7 +130,7 @@ export function openFlavorModal({ state, flavorId, user, onSaved, onDeleted, onP
         let msg = '';
         if (!name) msg = 'Informe o nome do sabor.';
         else if (!Number.isFinite(price) || price < 0) msg = 'Informe o preço de venda.';
-        else if (!Number.isFinite(stock) || stock < 0) msg = 'Informe o estoque (pode ser 0).';
+        else if (!Number.isFinite(stock) || stock < 0) msg = 'Informe a quantidade em estoque (pode ser 0).';
 
         const warnEl = g('f-warn');
         warnEl.hidden = !msg;
@@ -196,14 +147,14 @@ export function openFlavorModal({ state, flavorId, user, onSaved, onDeleted, onP
               name,
               price,
               stock,
-              tone: flavor ? flavor.tone : TONES[state.flavors.length % TONES.length]
+              tone: defaultTone
             },
             user,
             state
           });
 
           closeSheet();
-          showToast(flavor ? 'Sabor atualizado com sucesso' : 'Novo sabor cadastrado!');
+          showToast(flavor ? 'Sabor atualizado com sucesso!' : 'Novo sabor cadastrado!');
           if (typeof onSaved === 'function') onSaved();
         } catch (err) {
           warnEl.hidden = false;

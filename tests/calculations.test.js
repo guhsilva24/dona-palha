@@ -116,6 +116,34 @@ describe('Módulo de Produção e Fornada (productionCalculations.js)', () => {
     expect(res.remainingQty).toBe(50); // Sobram 50g
     expect(res.remainingCostCents).toBe(250); // Sobram R$ 2,50
   });
+
+  it('calcula o exemplo real do usuário: 4 caixas de 400g por R$ 5,99 cada (R$ 23,96), usou 349g em fornada de 255 palhas', () => {
+    // 4 cx de 400g = 1600g comprados por R$ 23,96
+    const chocIng = calculateIngredientCost({
+      supplyTotal: 23.96,
+      supplyQty: 1600,
+      packageWeight: 400,
+      packagesCount: 4,
+      usedQty: 349
+    });
+
+    expect(chocIng.totalSupplyGrams).toBe(1600);
+    expect(chocIng.lineCostCents).toBe(523); // (2396 * 349) / 1600 = 522.62 -> 523 centavos = R$ 5,23
+    expect(chocIng.lineCost).toBe(5.23);
+
+    // Soma com leite condensado (R$ 5,50) e bolacha maisena (R$ 2,25) = R$ 12,98 (1298 centavos)
+    const summary = calculateBatchSummary({
+      batchCostCents: 1298,
+      batchUnits: 255,
+      sellingPrice: 3.50
+    });
+
+    expect(summary.batchUnits).toBe(255);
+    expect(summary.batchCost).toBe(12.98);
+    expect(summary.unitCostCents).toBe(5); // ~ 5 centavos por palha (R$ 0,051)
+    expect(summary.projectedRevenueCents).toBe(89250); // 255 * 3,50 = R$ 892,50
+    expect(summary.projectedProfitCents).toBe(87952); // R$ 892,50 - R$ 12,98 = R$ 879,52
+  });
 });
 
 describe('Módulo de Estoque e Custo Médio Ponderado (inventoryCalculations.js)', () => {

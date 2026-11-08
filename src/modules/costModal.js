@@ -1,16 +1,13 @@
 /**
- * Módulo de Cadastro e Edição de Custos e Insumos
- * Calcula automaticamente o Custo por Produto com base na Quantidade Usada e Rendimento
- * Exemplo real:
- * - Comprou 1 cx de chocolate de 400g por R$ 20,00
- * - Usa 350g em uma fornada de 25 palhas
- * -> Custo por produto = R$ 0,70 por palha!
+ * Módulo de Cadastro e Edição de Custos e Insumos (Compras)
+ * Simples, direto e preparado para quem compra insumos no mercado.
+ * Exemplo: 4 caixas de chocolate de 400g por R$ 5,99 cada caixa (ou R$ 23,96 total).
  */
 
 import { openSheet, closeSheet } from '../components/BottomSheet.js';
 import { showToast } from '../components/Toast.js';
 import { dbService } from '../services/dbService.js';
-import { formatMoney, moneyToInput, calculateCostPerProduct } from '../calculations/index.js';
+import { formatMoney, moneyToInput } from '../calculations/index.js';
 import { today, num, esc } from '../utils/formatters.js';
 import { armDelete } from '../utils/dom.js';
 import { I } from '../utils/icons.js';
@@ -18,44 +15,37 @@ import { I } from '../utils/icons.js';
 export function openCostModal({ state, costId, user, onSaved, onDeleted }) {
   const cost = costId ? state.costs.find(c => c.id === costId) : null;
   const packageType = cost?.packageType || 'cx';
-  const packageWeight = cost?.packageWeight ?? (cost?.unit === 'g' ? cost.qty : 400);
   const packagesCount = cost?.packagesCount ?? 1;
-  const usedQty = cost?.usedQty ?? (cost?.unit === 'un' ? 25 : (cost?.packageWeight ? Math.min(cost.packageWeight, 350) : 350));
-  const recipeYield = cost?.recipeYield ?? 25;
+  const packageWeight = cost?.packageWeight ?? (cost?.unit === 'g' ? (cost.qty / packagesCount) : 400);
+  const totalVal = cost ? cost.total : 0;
+  const unitPriceVal = cost && packagesCount > 0 ? (cost.total / packagesCount) : 0;
 
   const body = `
     <form id="f-cost-form" novalidate>
-      <!-- BLOCO 1: COMPRA DO INSUMO -->
-      <div style="margin-bottom:12px">
-        <span class="pill" style="font-weight:700;font-size:11px;background:var(--brand-soft);color:var(--brand-dark);padding:4px 10px;border-radius:20px">
-          1. DADOS DA COMPRA
-        </span>
-      </div>
-
       <div class="field">
         <label for="k-item">Nome do produto / ingrediente <span class="req">*</span></label>
-        <input id="k-item" autocomplete="off" placeholder="Ex.: Chocolate em barra, Leite condensado, Biscoito maisena, Embalagem" value="${cost ? esc(cost.item) : ''}">
+        <input id="k-item" autocomplete="off" placeholder="Ex.: Chocolate em barra, Leite condensado, Bolacha maisena, Embalagem" value="${cost ? esc(cost.item) : ''}">
       </div>
 
       <div class="field">
         <label for="k-pkg-type">Como você comprou esse produto?</label>
         <select id="k-pkg-type">
-          <option value="cx" ${packageType === 'cx' ? 'selected' : ''}>Caixa com peso em gramas (cx) - Ex: Barra/Gotas 400g</option>
-          <option value="pct" ${packageType === 'pct' ? 'selected' : ''}>Pacote com peso em gramas (pct) - Ex: Biscoito 400g</option>
+          <option value="cx" ${packageType === 'cx' ? 'selected' : ''}>Caixa com peso em gramas (cx) - Ex: Chocolate 400g</option>
+          <option value="pct" ${packageType === 'pct' ? 'selected' : ''}>Pacote com peso em gramas (pct) - Ex: Bolacha maisena 400g</option>
           <option value="lata" ${packageType === 'lata' ? 'selected' : ''}>Lata com peso em gramas (lata) - Ex: Leite condensado 395g</option>
-          <option value="barra" ${packageType === 'barra' ? 'selected' : ''}>Barra em gramas (barra) - Ex: Barra 1000g</option>
+          <option value="barra" ${packageType === 'barra' ? 'selected' : ''}>Barra em gramas (barra) - Ex: Barra de 1000g</option>
           <option value="kg" ${packageType === 'kg' ? 'selected' : ''}>Quilo avulso (kg)</option>
-          <option value="un" ${packageType === 'un' ? 'selected' : ''}>Unidade simples (un) - Ex: Caixinhas, saquinhos, adesivos</option>
+          <option value="un" ${packageType === 'un' ? 'selected' : ''}>Unidade simples (un) - Ex: Caixinhas, saquinhos, laços</option>
         </select>
       </div>
 
       <div class="grid2" id="k-weight-fields">
         <div class="field">
           <label for="k-pkg-count" id="k-pkg-count-l">Quantidade comprada <span class="req">*</span></label>
-          <input id="k-pkg-count" inputmode="numeric" placeholder="Ex: 1" value="${packagesCount}">
+          <input id="k-pkg-count" inputmode="numeric" placeholder="Ex: 4" value="${packagesCount}">
         </div>
         <div class="field" id="k-weight-wrap">
-          <label for="k-pkg-weight">Peso por embalagem (gramas) <span class="req">*</span></label>
+          <label for="k-pkg-weight">Peso por embalagem (g) <span class="req">*</span></label>
           <div class="pre">
             <span>g</span>
             <input id="k-pkg-weight" inputmode="numeric" placeholder="Ex: 400" value="${packageWeight}">
@@ -64,75 +54,56 @@ export function openCostModal({ state, costId, user, onSaved, onDeleted }) {
       </div>
 
       <div class="grid2">
+        <div class="field" id="k-unit-price-wrap">
+          <label for="k-unit-price" id="k-unit-price-l">Preço por caixa/unidade</label>
+          <div class="pre">
+            <span>R$</span>
+            <input id="k-unit-price" inputmode="decimal" placeholder="Ex: 5,99" value="${unitPriceVal > 0 ? moneyToInput(unitPriceVal) : ''}">
+          </div>
+        </div>
         <div class="field">
           <label for="k-total">Valor total pago <span class="req">*</span></label>
           <div class="pre">
             <span>R$</span>
-            <input id="k-total" inputmode="decimal" placeholder="0,00" value="${cost ? moneyToInput(cost.total) : ''}">
-          </div>
-        </div>
-        <div class="field">
-          <label for="k-date">Data da compra</label>
-          <input id="k-date" type="date" value="${cost ? cost.date : today()}">
-        </div>
-      </div>
-
-      <!-- BLOCO 2: USO NA RECEITA E CUSTO POR PRODUTO -->
-      <div style="margin:20px 0 10px;padding-top:14px;border-top:1px solid var(--line)">
-        <span class="pill good" style="font-weight:700;font-size:11px;padding:4px 10px;border-radius:20px">
-          2. QUANTIDADE USADA E CUSTO POR PRODUTO
-        </span>
-      </div>
-      <p class="muted" style="margin:0 0 14px;font-size:13px;line-height:1.4">
-        Informe quanto você usa em uma receita/fornada e quantas palhas rendem para ver o <b>custo exato por produto</b>:
-      </p>
-
-      <div class="grid2">
-        <div class="field">
-          <label for="k-used-qty" id="k-used-qty-l">Quantidade usada na receita <span class="req">*</span></label>
-          <div class="pre">
-            <span id="k-used-unit-badge">g</span>
-            <input id="k-used-qty" inputmode="decimal" placeholder="Ex: 350" value="${usedQty}">
-          </div>
-        </div>
-        <div class="field">
-          <label for="k-recipe-yield">Rendimento da receita <span class="req">*</span></label>
-          <div class="pre">
-            <span>un</span>
-            <input id="k-recipe-yield" inputmode="numeric" placeholder="Ex: 25" value="${recipeYield}">
+            <input id="k-total" inputmode="decimal" placeholder="Ex: 23,96" value="${totalVal > 0 ? moneyToInput(totalVal) : ''}">
           </div>
         </div>
       </div>
 
-      <!-- CARD RESULTADO DO CÁLCULO EM TEMPO REAL -->
-      <div class="card" style="padding:16px;background:var(--card);border:2px solid var(--brand);border-radius:14px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.04)">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center">
+      <div class="field">
+        <label for="k-date">Data da compra</label>
+        <input id="k-date" type="date" value="${cost ? cost.date : today()}">
+      </div>
+
+      <!-- CARD RESUMO CLARO E DIDÁTICO -->
+      <div class="card" style="padding:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:center">
           <div style="border-right:1px solid var(--line);padding-right:8px">
-            <span class="muted" style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;display:block">
-              Custo por Produto
+            <span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;display:block">
+              Total da Compra
             </span>
-            <b style="font-size:24px;color:var(--brand);display:block;margin:3px 0" id="k-res-product">
+            <b style="font-size:20px;color:var(--brand);display:block;margin:2px 0" id="k-res-total">
               R$ 0,00
             </b>
-            <span class="muted" style="font-size:11px" id="k-res-product-sub">
-              por palha italiana
+            <span class="muted" style="font-size:11.5px" id="k-res-stock">
+              0g comprados
             </span>
           </div>
           <div>
-            <span class="muted" style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;display:block">
-              Custo Usado na Receita
+            <span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;display:block">
+              Custo Proporcional
             </span>
-            <b style="font-size:20px;color:var(--ink);display:block;margin:5px 0" id="k-res-batch">
+            <b style="font-size:18px;color:var(--ink);display:block;margin:3px 0" id="k-res-rate">
               R$ 0,00
             </b>
-            <span class="muted" style="font-size:11px" id="k-res-batch-sub">
-              na fornada
+            <span class="muted" style="font-size:11.5px" id="k-res-unit">
+              por grama
             </span>
           </div>
         </div>
 
-        <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--muted);line-height:1.45" id="k-res-explanation">
-          Preencha o valor pago para calcular automaticamente.
+        <div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:12px;color:var(--muted);line-height:1.4" id="k-res-tip">
+          💡 Cadastre suas compras do mercado aqui. Depois, na aba <b>Sabores</b>, clique em <b>Produzir Fornada</b> para usar esses ingredientes e calcular o custo de cada palha italiana!
         </div>
       </div>
 
@@ -140,28 +111,27 @@ export function openCostModal({ state, costId, user, onSaved, onDeleted }) {
 
       <div class="actions">
         <button class="btn primary block" type="submit" id="k-submit">
-          ${I('check')} ${cost ? 'Salvar Insumo' : 'Cadastrar Insumo'}
+          ${I('check')} ${cost ? 'Salvar Alterações' : 'Cadastrar Compra'}
         </button>
         ${cost ? `
-          <button class="btn danger" type="button" id="k-del">${I('trash')} Excluir insumo</button>
+          <button class="btn danger" type="button" id="k-del">${I('trash')} Excluir produto</button>
         ` : ''}
       </div>
     </form>
   `;
 
   openSheet({
-    title: cost ? 'Editar Insumo e Custo' : 'Novo Insumo / Custo por Produto',
+    title: cost ? 'Editar Compra de Insumo' : 'Nova Compra de Insumos',
     body,
     mount(b) {
       const g = id => b.querySelector('#' + id);
+      let isUpdatingPrice = false;
 
-      function calc() {
+      function updateResumo() {
         const type = g('k-pkg-type').value;
         const count = parseFloat(String(g('k-pkg-count').value).replace(',', '.')) || 1;
         const weight = parseFloat(String(g('k-pkg-weight').value).replace(',', '.')) || 0;
         const total = num(g('k-total').value);
-        const used = parseFloat(String(g('k-used-qty').value).replace(',', '.')) || 0;
-        const recipeYield = parseInt(String(g('k-recipe-yield').value), 10) || 25;
 
         const isSimpleUnit = type === 'un';
         const isKg = type === 'kg';
@@ -173,55 +143,91 @@ export function openCostModal({ state, costId, user, onSaved, onDeleted }) {
             ? 'Quantidade em quilos (kg)'
             : 'Quantidade de caixas / embalagens';
 
-        const unit = isSimpleUnit ? 'un' : 'g';
-        g('k-used-unit-badge').textContent = unit;
+        g('k-unit-price-l').textContent = isSimpleUnit
+          ? 'Preço por unidade (R$)'
+          : isKg
+            ? 'Preço por quilo (R$)'
+            : 'Preço por caixa / embalagem (R$)';
 
-        const result = calculateCostPerProduct({
-          supplyTotal: total,
-          supplyQty: isSimpleUnit ? count : (isKg ? count * 1000 : count * (weight > 0 ? weight : 1)),
-          supplyUnit: unit,
-          packageWeight: isSimpleUnit || isKg ? null : weight,
-          packagesCount: count,
-          usedQty: used,
-          recipeYield
-        });
+        let totalGrams = 0;
+        let unitText = '';
 
-        if (total > 0 && result.totalPurchased > 0) {
-          g('k-res-product').textContent = formatMoney(result.costPerProduct);
-          g('k-res-product-sub').textContent = `por palha (${recipeYield} un na receita)`;
-
-          g('k-res-batch').textContent = formatMoney(result.usedCost);
-          g('k-res-batch-sub').textContent = `${used}${unit} de ${result.totalPurchased}${unit}`;
-
-          const unitDesc = unit === 'g' ? 'por grama' : 'por unidade';
-          const unitRate = formatMoney(result.costPerUnit);
-
-          let expl = `<b>Cálculo claro:</b> Custo base = <b>${unitRate}</b> ${unitDesc}. `;
-          expl += `Usando <b>${used}${unit}</b> na fornada = <b>${formatMoney(result.usedCost)}</b>. `;
-          expl += `Dividido por <b>${recipeYield} produtos</b> = <b style="color:var(--brand)">${formatMoney(result.costPerProduct)} por unidade</b>.`;
-
-          if (result.remainingQty > 0) {
-            expl += `<br><span style="color:var(--brand-dark);font-weight:600">Sobra no estoque:</span> ${result.remainingQty}${unit} (${formatMoney(result.remainingCost)}) para as próximas produções.`;
-          }
-
-          g('k-res-explanation').innerHTML = expl;
+        if (isSimpleUnit) {
+          totalGrams = count;
+          unitText = 'unidade';
+        } else if (isKg) {
+          totalGrams = count * 1000;
+          unitText = 'g';
         } else {
-          g('k-res-product').textContent = 'R$ 0,00';
-          g('k-res-batch').textContent = 'R$ 0,00';
-          g('k-res-explanation').textContent = 'Informe o valor total pago para ver o custo por produto calculado.';
+          totalGrams = count * (weight > 0 ? weight : 1);
+          unitText = 'g';
         }
 
-        return result;
+        if (total > 0 && totalGrams > 0) {
+          g('k-res-total').textContent = formatMoney(total);
+          g('k-res-stock').textContent = isSimpleUnit
+            ? `${count} un compradas`
+            : `${totalGrams.toLocaleString('pt-BR')}g (${count} ${type}${weight > 0 ? ' de ' + weight + 'g' : ''})`;
+
+          const costPerUnit = total / totalGrams;
+          if (unitText === 'g') {
+            g('k-res-rate').textContent = `R$ ${costPerUnit.toFixed(4).replace('.', ',')}`;
+            g('k-res-unit').textContent = 'por grama';
+          } else {
+            g('k-res-rate').textContent = formatMoney(costPerUnit);
+            g('k-res-unit').textContent = 'por unidade';
+          }
+        } else {
+          g('k-res-total').textContent = 'R$ 0,00';
+          g('k-res-stock').textContent = '0g comprados';
+          g('k-res-rate').textContent = 'R$ 0,00';
+        }
       }
 
-      g('k-pkg-type').addEventListener('change', calc);
-      g('k-pkg-count').addEventListener('input', calc);
-      g('k-pkg-weight').addEventListener('input', calc);
-      g('k-total').addEventListener('input', calc);
-      g('k-used-qty').addEventListener('input', calc);
-      g('k-recipe-yield').addEventListener('input', calc);
+      // Ao digitar preço unitário -> atualiza valor total
+      g('k-unit-price').addEventListener('input', () => {
+        if (isUpdatingPrice) return;
+        const unitP = num(g('k-unit-price').value);
+        const count = parseFloat(String(g('k-pkg-count').value).replace(',', '.')) || 1;
+        if (Number.isFinite(unitP) && unitP >= 0) {
+          isUpdatingPrice = true;
+          const totalVal = unitP * count;
+          g('k-total').value = moneyToInput(totalVal);
+          isUpdatingPrice = false;
+        }
+        updateResumo();
+      });
 
-      calc();
+      // Ao digitar valor total -> atualiza preço unitário
+      g('k-total').addEventListener('input', () => {
+        if (isUpdatingPrice) return;
+        const tot = num(g('k-total').value);
+        const count = parseFloat(String(g('k-pkg-count').value).replace(',', '.')) || 1;
+        if (Number.isFinite(tot) && tot >= 0 && count > 0) {
+          isUpdatingPrice = true;
+          const unitVal = tot / count;
+          g('k-unit-price').value = moneyToInput(unitVal);
+          isUpdatingPrice = false;
+        }
+        updateResumo();
+      });
+
+      // Ao alterar quantidade de caixas
+      g('k-pkg-count').addEventListener('input', () => {
+        const count = parseFloat(String(g('k-pkg-count').value).replace(',', '.')) || 1;
+        const unitP = num(g('k-unit-price').value);
+        if (unitP > 0) {
+          isUpdatingPrice = true;
+          g('k-total').value = moneyToInput(unitP * count);
+          isUpdatingPrice = false;
+        }
+        updateResumo();
+      });
+
+      g('k-pkg-type').addEventListener('change', updateResumo);
+      g('k-pkg-weight').addEventListener('input', updateResumo);
+
+      updateResumo();
 
       g('f-cost-form').addEventListener('submit', async e => {
         e.preventDefault();
@@ -230,23 +236,18 @@ export function openCostModal({ state, costId, user, onSaved, onDeleted }) {
         const count = parseFloat(String(g('k-pkg-count').value).replace(',', '.')) || 1;
         const weight = parseFloat(String(g('k-pkg-weight').value).replace(',', '.')) || 0;
         const total = num(g('k-total').value);
-        const used = parseFloat(String(g('k-used-qty').value).replace(',', '.')) || 0;
-        const recipeYield = parseInt(String(g('k-recipe-yield').value), 10) || 25;
         const d = g('k-date').value || today();
 
         const isSimpleUnit = type === 'un';
         const isKg = type === 'kg';
         const unit = isSimpleUnit ? 'un' : 'g';
-
-        let totalGrams = isSimpleUnit ? count : (isKg ? count * 1000 : count * (weight > 0 ? weight : 1));
+        const totalGrams = isSimpleUnit ? count : (isKg ? count * 1000 : count * (weight > 0 ? weight : 1));
 
         let msg = '';
         if (!item) msg = 'Informe o nome do item comprado.';
         else if (!(count > 0)) msg = 'Informe a quantidade comprada maior que zero.';
         else if (!isSimpleUnit && !isKg && !(weight > 0)) msg = 'Informe o peso em gramas por embalagem (ex: 400g).';
-        else if (!(total > 0)) msg = 'Informe o valor total pago.';
-        else if (!(used > 0)) msg = 'Informe a quantidade usada na receita (ex: 350g).';
-        else if (!(recipeYield > 0)) msg = 'Informe o rendimento da receita (ex: 25 produtos).';
+        else if (!(total > 0)) msg = 'Informe o valor total pago ou preço por embalagem.';
 
         const warnEl = g('k-warn');
         warnEl.hidden = !msg;
@@ -255,16 +256,6 @@ export function openCostModal({ state, costId, user, onSaved, onDeleted }) {
 
         const submitBtn = g('k-submit');
         submitBtn.disabled = true;
-
-        const calcResult = calculateCostPerProduct({
-          supplyTotal: total,
-          supplyQty: totalGrams,
-          supplyUnit: unit,
-          packageWeight: isSimpleUnit || isKg ? null : weight,
-          packagesCount: count,
-          usedQty: used,
-          recipeYield
-        });
 
         try {
           await dbService.saveCost({
@@ -277,10 +268,6 @@ export function openCostModal({ state, costId, user, onSaved, onDeleted }) {
               unit,
               qty: totalGrams,
               total,
-              usedQty: used,
-              recipeYield,
-              costPerProduct: calcResult.costPerProduct,
-              usedCost: calcResult.usedCost,
               date: d
             },
             user,
@@ -288,7 +275,7 @@ export function openCostModal({ state, costId, user, onSaved, onDeleted }) {
           });
 
           closeSheet();
-          showToast(cost ? 'Insumo atualizado!' : 'Insumo e custo por produto salvos!');
+          showToast(cost ? 'Compra atualizada com sucesso!' : 'Compra cadastrada no estoque!');
           if (typeof onSaved === 'function') onSaved();
         } catch (err) {
           warnEl.hidden = false;
@@ -308,7 +295,7 @@ export function openCostModal({ state, costId, user, onSaved, onDeleted }) {
                 state
               });
               closeSheet();
-              showToast('Insumo excluído.');
+              showToast('Produto excluído.');
               if (typeof onDeleted === 'function') onDeleted();
             } catch (err) {
               alert(err.message || 'Erro ao excluir insumo.');

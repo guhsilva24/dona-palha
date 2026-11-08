@@ -48,6 +48,7 @@ class AppController {
     this.customFrom = today().slice(0, 8) + '01';
     this.customTo = today();
     this.selectedMonth = today().slice(0, 7);
+    this.selectedFlavorFilter = 'todos';
     this.keepSearch = false;
   }
 
@@ -144,8 +145,8 @@ class AppController {
         `${this.state.costs.length} ${this.state.costs.length === 1 ? 'compra' : 'compras'} · ${formatMoney(totalCosts)} gastos`
       ],
       conta: [
-        'Conta & Nuvem',
-        this.user ? `Conectado como ${this.user.email}` : 'Autenticação e sincronização com Supabase'
+        'Configurações',
+        'Margem de lucro, nuvem Supabase e backup'
       ]
     };
 
@@ -241,7 +242,8 @@ class AppController {
       case 'sabores':
         content = renderFlavorsView({
           state: this.state,
-          query: this.query
+          query: this.query,
+          selectedFlavorFilter: this.selectedFlavorFilter
         });
         break;
       case 'custos':
@@ -415,6 +417,10 @@ class AppController {
         case 'newCost':
         case 'editCost':
           this.openCostAction(id);
+          break;
+        case 'filterFlavorView':
+          this.selectedFlavorFilter = el.dataset.fid || 'todos';
+          this.renderViewContent();
           break;
         case 'filterSales':
           this.salesFilter = el.dataset.v;

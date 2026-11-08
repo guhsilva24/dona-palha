@@ -56,70 +56,80 @@ export function getDemoState() {
     mkSale(0, 1, 2, '', true)
   ];
 
+  const c1Id = uid();
+  const c2Id = uid();
+  const c3Id = uid();
+  const c4Id = uid();
+
   const costs = [
     {
-      id: uid(),
+      id: c1Id,
       ts,
       item: 'Chocolate em barra',
       packageType: 'cx',
-      packagesCount: 1,
+      packagesCount: 4,
       packageWeight: 400,
       unit: 'g',
-      qty: 400,
-      total: 20,
-      usedQty: 350,
-      recipeYield: 25,
-      costPerProduct: 0.70,
-      usedCost: 17.50,
+      qty: 1600,
+      total: 23.96,
       date: addDays(t, -7)
     },
     {
-      id: uid(),
+      id: c2Id,
       ts: ts + 1,
       item: 'Leite condensado',
       packageType: 'lata',
-      packagesCount: 2,
+      packagesCount: 6,
       packageWeight: 395,
       unit: 'g',
-      qty: 790,
-      total: 16,
-      usedQty: 395,
-      recipeYield: 25,
-      costPerProduct: 0.32,
-      usedCost: 8.00,
+      qty: 2370,
+      total: 33.00,
       date: addDays(t, -6)
     },
     {
-      id: uid(),
+      id: c3Id,
       ts: ts + 2,
-      item: 'Biscoito maisena',
+      item: 'Bolacha maisena',
       packageType: 'pct',
-      packagesCount: 1,
+      packagesCount: 2,
       packageWeight: 400,
       unit: 'g',
-      qty: 400,
-      total: 6,
-      usedQty: 200,
-      recipeYield: 25,
-      costPerProduct: 0.12,
-      usedCost: 3.00,
+      qty: 800,
+      total: 9.00,
       date: addDays(t, -7)
     },
     {
-      id: uid(),
+      id: c4Id,
       ts: ts + 3,
       item: 'Caixinhas de embalagem',
       packageType: 'un',
-      packagesCount: 50,
+      packagesCount: 100,
       packageWeight: null,
       unit: 'un',
-      qty: 50,
-      total: 25,
-      usedQty: 25,
-      recipeYield: 25,
-      costPerProduct: 0.50,
-      usedCost: 12.50,
+      qty: 100,
+      total: 35.00,
       date: addDays(t, -4)
+    }
+  ];
+
+  const prodId = uid();
+  const productions = [
+    {
+      id: prodId,
+      batchNumber: 1,
+      date: addDays(t, -3),
+      flavorId: flavors[0].id,
+      flavorName: flavors[0].name,
+      qty: 255,
+      batchCost: 12.98,
+      unitCost: 0.051,
+      sellingPrice: flavors[0].price,
+      notes: 'Fornada 1',
+      ingredients: [
+        { costId: c1Id, item: 'Chocolate em barra', unit: 'g', qty: 349, unitCost: 0.015, total: 5.23 },
+        { costId: c2Id, item: 'Leite condensado', unit: 'g', qty: 395, unitCost: 0.014, total: 5.50 },
+        { costId: c3Id, item: 'Bolacha maisena', unit: 'g', qty: 200, unitCost: 0.011, total: 2.25 }
+      ]
     }
   ];
 
@@ -127,8 +137,11 @@ export function getDemoState() {
     flavors,
     sales,
     costs,
-    productions: [],
+    productions,
     stockMovements: [],
+    settings: {
+      defaultMargin: 50
+    },
     demo: true,
     rev: Date.now()
   };

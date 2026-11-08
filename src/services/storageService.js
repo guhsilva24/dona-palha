@@ -12,6 +12,9 @@ export function createEmptyState() {
     costs: [],
     productions: [],
     stockMovements: [],
+    settings: {
+      defaultMargin: 50
+    },
     demo: false,
     rev: 0,
     lastSync: null
@@ -27,6 +30,10 @@ export function normalizeState(data = {}) {
     costs: safeArray(d.costs),
     productions: safeArray(d.productions),
     stockMovements: safeArray(d.stockMovements),
+    settings: {
+      defaultMargin: Number(d.settings?.defaultMargin) || 50,
+      ...(d.settings || {})
+    },
     demo: Boolean(d.demo),
     rev: Number(d.rev) || 0,
     lastSync: d.lastSync || null

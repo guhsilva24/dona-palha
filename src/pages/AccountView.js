@@ -1,39 +1,86 @@
 /**
- * Página de Conta / Login integrada com Supabase (AccountView)
+ * Página de Ajustes, Configurações de Margem de Lucro e Conta Supabase (AccountView)
  */
 
 import { authService } from '../services/authService.js';
 import { dbService } from '../services/dbService.js';
 import { storageService } from '../services/storageService.js';
 import { isSupabaseReady } from '../services/supabaseClient.js';
+import { formatMoney, calculatePriceFromMargin } from '../calculations/index.js';
 import { showToast } from '../components/Toast.js';
 import { esc } from '../utils/formatters.js';
+import { MARGIN_PRESETS } from '../utils/constants.js';
 import { I } from '../utils/icons.js';
 
 export function renderAccountView({ user, state }) {
   const isCloud = isSupabaseReady();
+  const currentMargin = state.settings?.defaultMargin || 50;
 
-  let html = '';
+  // Simulação de preço com base na margem atual para uma palha com custo base de R$ 1,50
+  const sim = calculatePriceFromMargin({ cost: 1.50, marginPercent: currentMargin });
 
+  let html = `
+    <!-- SEÇÃO 1: MARGEM DE LUCRO PADRÃO DO NEGÓCIO -->
+    <div class="card" style="padding:16px;margin-bottom:18px;border:1px solid var(--line);border-radius:18px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span class="sh-ic" style="width:36px;height:36px;border-radius:10px">${I('trend')}</span>
+        <div>
+          <h2 style="margin:0;font-size:16px">Margem de Lucro Desejada</h2>
+          <span class="muted" style="font-size:12.5px">Configuração geral de lucro para suas palhas</span>
+        </div>
+      </div>
+
+      <p class="muted" style="margin:8px 0 12px;font-size:13px;line-height:1.4">
+        Defina a porcentagem de lucro padrão que você deseja ter na venda das suas palhas:
+      </p>
+
+      <div class="chips" style="margin-bottom:12px;overflow-x:auto">
+        ${[30, 40, 50, 60, 70, 80, 100].map(m => `
+          <button class="chip" type="button" data-cfg-margin="${m}" aria-pressed="${m === currentMargin}">
+            ${m}%
+          </button>
+        `).join('')}
+      </div>
+
+      <div class="field" style="margin-bottom:10px">
+        <label for="cfg-margin-input" style="font-size:12.5px">Margem de lucro personalizada (%)</label>
+        <div class="pre">
+          <span>%</span>
+          <input id="cfg-margin-input" inputmode="numeric" type="number" min="1" max="95" value="${currentMargin}" placeholder="50">
+        </div>
+      </div>
+
+      <!-- SIMULADOR DINÂMICO DE LUCRO -->
+      <div style="background:var(--brand-soft);padding:10px 14px;border-radius:12px;margin-bottom:14px;font-size:12.5px;color:var(--ink);line-height:1.4" id="cfg-margin-sim">
+        💡 <b>Exemplo prático:</b> Se uma palha italiana custar <b>R$ 1,50</b> em ingredientes, com <b>${currentMargin}% de margem</b> o preço sugerido é <b>${formatMoney(sim.suggestedPrice)}</b> (você lucra <b>${formatMoney(sim.profit)}</b> por unidade vendida).
+      </div>
+
+      <button class="btn primary block" type="button" id="btn-save-margin">
+        ${I('check')} Salvar Margem de Lucro
+      </button>
+    </div>
+  `;
+
+  // SEÇÃO 2: CONTA E NUVEM SUPABASE
   if (!user) {
     html += `
-      <div class="card" style="padding:18px;margin-bottom:16px;text-align:center">
-        <div class="brand-mark" style="margin:0 auto 10px;width:48px;height:48px;font-size:24px;border-radius:14px;background:var(--brand);color:#fff">
+      <div class="card" style="padding:18px;margin-bottom:16px;text-align:center;border-radius:18px">
+        <div class="brand-mark" style="margin:0 auto 10px;width:44px;height:44px;font-size:22px;border-radius:12px;background:var(--brand);color:#fff">
           ${I('cloud')}
         </div>
-        <h2 style="margin:0 0 4px;font-size:18px">Conectar ao Supabase</h2>
-        <p class="muted" style="margin:0;font-size:13.5px">
+        <h2 style="margin:0 0 4px;font-size:17px">Conectar ao Supabase</h2>
+        <p class="muted" style="margin:0;font-size:13px">
           ${isCloud ? 'Nuvem Supabase pronta para sincronização' : 'Modo local seguro (configure as chaves no .env)'}
         </p>
       </div>
 
-      <div class="chips" style="margin-bottom:16px">
+      <div class="chips" style="margin-bottom:14px">
         <button class="chip" type="button" id="tab-login" aria-pressed="true">Entrar</button>
         <button class="chip" type="button" id="tab-signup" aria-pressed="false">Criar Conta</button>
       </div>
 
       <!-- Formulário de Login -->
-      <form id="f-page-login" novalidate class="card" style="padding:16px;margin-bottom:18px">
+      <form id="f-page-login" novalidate class="card" style="padding:16px;margin-bottom:18px;border-radius:18px">
         <div class="field">
           <label for="page-email">Email <span class="req">*</span></label>
           <input id="page-email" type="email" placeholder="seu@email.com" required autocomplete="email">
@@ -52,7 +99,7 @@ export function renderAccountView({ user, state }) {
       </form>
 
       <!-- Formulário de Cadastro -->
-      <form id="f-page-signup" novalidate class="card" style="padding:16px;margin-bottom:18px" hidden>
+      <form id="f-page-signup" novalidate class="card" style="padding:16px;margin-bottom:18px;border-radius:18px" hidden>
         <div class="field">
           <label for="page-signup-name">Nome da sua Confeitaria ou Confeiteiro(a)</label>
           <input id="page-signup-name" type="text" placeholder="Ex.: Gustavo - Dona Palha">
@@ -70,20 +117,6 @@ export function renderAccountView({ user, state }) {
           ${I('plus')} Criar Conta e Conectar
         </button>
       </form>
-
-      <div class="sec-h"><h2>Backup e Segurança Local</h2></div>
-      <div class="card" style="padding:14px">
-        <p class="muted" style="margin:0 0 12px;font-size:13px">
-          Mesmo sem login, todos os seus dados ficam salvos com segurança neste aparelho. Você pode exportar uma cópia a qualquer momento.
-        </p>
-        <div class="actions">
-          <button class="btn" type="button" id="btn-export-json">${I('box')} Baixar Backup (JSON)</button>
-          <label class="btn" style="cursor:pointer">
-            ${I('refresh')} Importar Backup
-            <input type="file" id="input-import-json" accept=".json" style="display:none">
-          </label>
-        </div>
-      </div>
     `;
   } else {
     // Usuário logado
@@ -92,7 +125,7 @@ export function renderAccountView({ user, state }) {
     const initial = (userName || userEmail || 'D').charAt(0).toUpperCase();
 
     html += `
-      <div class="card" style="padding:16px;margin-bottom:16px">
+      <div class="card" style="padding:16px;margin-bottom:16px;border-radius:18px">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
           <div class="av lg" style="background:var(--brand);color:#fff">${esc(initial)}</div>
           <div style="min-width:0;flex:1">
@@ -116,13 +149,9 @@ export function renderAccountView({ user, state }) {
         </div>
       </div>
 
-      <div class="sec-h"><h2>Ações da Conta</h2></div>
-      <div class="actions">
+      <div class="actions" style="margin-bottom:18px">
         <button class="btn primary block" type="button" id="btn-sync-cloud">
           ${I('refresh')} Sincronizar Tudo com Supabase Agora
-        </button>
-        <button class="btn block" type="button" id="btn-export-json">
-          ${I('box')} Baixar Backup Completo (JSON)
         </button>
         <button class="btn danger block" type="button" id="btn-logout">
           ${I('x')} Sair da Conta
@@ -131,10 +160,73 @@ export function renderAccountView({ user, state }) {
     `;
   }
 
+  // SEÇÃO 3: BACKUP E SEGURANÇA LOCAL
+  html += `
+    <div class="sec-h"><h2>Backup e Segurança Local</h2></div>
+    <div class="card" style="padding:14px;border-radius:18px">
+      <p class="muted" style="margin:0 0 12px;font-size:13px">
+        Mesmo sem internet ou sem login, todos os seus dados ficam salvos com segurança neste aparelho. Você pode baixar uma cópia do arquivo a qualquer momento:
+      </p>
+      <div class="actions">
+        <button class="btn" type="button" id="btn-export-json">${I('box')} Baixar Backup Completo (JSON)</button>
+        <label class="btn" style="cursor:pointer">
+          ${I('refresh')} Importar / Restaurar Backup
+          <input type="file" id="input-import-json" accept=".json" style="display:none">
+        </label>
+      </div>
+    </div>
+  `;
+
   return html;
 }
 
 export function bindAccountViewEvents({ container, user, state, onUserChanged, onDataReload }) {
+  // Ajuste de margem de lucro
+  const marginInput = container.querySelector('#cfg-margin-input');
+  const marginSim = container.querySelector('#cfg-margin-sim');
+  const btnSaveMargin = container.querySelector('#btn-save-margin');
+
+  function updateMarginSim(val) {
+    const m = Math.min(95, Math.max(1, parseFloat(String(val).replace(',', '.')) || 50));
+    const sim = calculatePriceFromMargin({ cost: 1.50, marginPercent: m });
+    if (marginSim) {
+      marginSim.innerHTML = `💡 <b>Exemplo prático:</b> Se uma palha italiana custar <b>R$ 1,50</b> em ingredientes, com <b>${m}% de margem</b> o preço sugerido é <b>${formatMoney(sim.suggestedPrice)}</b> (você lucra <b>${formatMoney(sim.profit)}</b> por unidade vendida).`;
+    }
+  }
+
+  container.querySelectorAll('[data-cfg-margin]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = Number(btn.dataset.cfgMargin);
+      if (marginInput) marginInput.value = val;
+      container.querySelectorAll('[data-cfg-margin]').forEach(b => {
+        b.setAttribute('aria-pressed', String(Number(b.dataset.cfgMargin) === val));
+      });
+      updateMarginSim(val);
+    });
+  });
+
+  if (marginInput) {
+    marginInput.addEventListener('input', e => {
+      const val = parseFloat(e.target.value);
+      if (val > 0) {
+        container.querySelectorAll('[data-cfg-margin]').forEach(b => {
+          b.setAttribute('aria-pressed', String(Number(b.dataset.cfgMargin) === val));
+        });
+        updateMarginSim(val);
+      }
+    });
+  }
+
+  if (btnSaveMargin) {
+    btnSaveMargin.addEventListener('click', () => {
+      const val = Math.min(95, Math.max(1, parseFloat(String(marginInput?.value || 50).replace(',', '.')) || 50));
+      state.settings = state.settings || {};
+      state.settings.defaultMargin = val;
+      storageService.save(state);
+      showToast(`Margem padrão de ${val}% salva com sucesso!`);
+    });
+  }
+
   // Alternar abas Entrar / Criar Conta
   const tabLogin = container.querySelector('#tab-login');
   const tabSignup = container.querySelector('#tab-signup');
@@ -309,4 +401,3 @@ export function bindAccountViewEvents({ container, user, state, onUserChanged, o
     });
   }
 }
-

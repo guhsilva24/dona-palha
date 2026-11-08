@@ -26,8 +26,10 @@ export const TABS = [
   { id: 'geral', label: 'Visão geral', icon: 'grid' },
   { id: 'sabores', label: 'Sabores', icon: 'layers' },
   { id: 'custos', label: 'Custos', icon: 'receipt' },
-  { id: 'conta', label: 'Conta', icon: 'user' }
+  { id: 'conta', label: 'Ajustes', icon: 'settings' }
 ];
+
+export const DEFAULT_PROFIT_MARGIN = 50;
 
 export const PERIOD_OPTIONS = [
   { id: 'hoje', label: 'Hoje' },
