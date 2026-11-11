@@ -9,7 +9,7 @@ import { authService } from './services/authService.js';
 import { dbService } from './services/dbService.js';
 import { storageService, createEmptyState } from './services/storageService.js';
 import { syncService } from './services/syncService.js';
-import { isSupabaseReady } from './services/supabaseClient.js';
+import { supabase, isSupabaseReady } from './services/supabaseClient.js';
 
 import { renderHeader, updateSyncBadge } from './components/Header.js';
 import { renderTabBar } from './components/TabBar.js';
@@ -69,8 +69,10 @@ class AppController {
           syncService.setStatus('busy');
           this.state = await dbService.loadAll(user);
           syncService.setStatus('ok');
+          this.setupRealtimeSync();
         } else {
           syncService.setStatus('local');
+          this.cleanupRealtimeSync();
         }
       } catch (err) {
         console.warn('Erro na autenticação inicial:', err);
@@ -84,8 +86,10 @@ class AppController {
           syncService.setStatus('busy');
           this.state = await dbService.loadAll(user);
           syncService.setStatus('ok');
+          this.setupRealtimeSync();
         } else {
           syncService.setStatus('local');
+          this.cleanupRealtimeSync();
         }
         this.render();
       });
@@ -344,8 +348,70 @@ class AppController {
     });
   }
 
+  scheduleCloudRefresh() {
+    if (this._refreshTimer) clearTimeout(this._refreshTimer);
+    this._refreshTimer = setTimeout(async () => {
+      if (!this.user || !isSupabaseReady()) return;
+      try {
+        syncService.setStatus('busy');
+        this.state = await dbService.loadAll(this.user);
+        syncService.setStatus('ok');
+        this.render();
+      } catch (err) {
+        console.warn('Erro ao atualizar dados em tempo real:', err);
+        syncService.setStatus('err');
+      }
+    }, 300);
+  }
+
+  setupRealtimeSync() {
+    this.cleanupRealtimeSync();
+    if (!this.user || !isSupabaseReady()) return;
+
+    try {
+      this.realtimeChannel = supabase
+        .channel('realtime:all-device-changes')
+        .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+          this.scheduleCloudRefresh();
+        })
+        .subscribe(status => {
+          if (status === 'SUBSCRIBED') {
+            syncService.setStatus('ok');
+          }
+        });
+    } catch (err) {
+      console.warn('Não foi possível inicializar Supabase Realtime:', err);
+    }
+  }
+
+  cleanupRealtimeSync() {
+    if (this.realtimeChannel) {
+      try {
+        supabase.removeChannel(this.realtimeChannel);
+      } catch (e) {}
+      this.realtimeChannel = null;
+    }
+    if (this._refreshTimer) {
+      clearTimeout(this._refreshTimer);
+      this._refreshTimer = null;
+    }
+  }
+
   bindEvents() {
     window.addEventListener('hashchange', () => this.handleRoute());
+
+    // Sincronização automática quando o usuário volta para a aba ou abre o app no celular
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && this.user) {
+        this.scheduleCloudRefresh();
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      if (this.user) {
+        this.scheduleCloudRefresh();
+      }
+    });
 
     // Fechar sheet com Escape
     document.addEventListener('keydown', e => {
